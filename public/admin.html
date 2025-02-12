@@ -1,0 +1,55 @@
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者ページ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="user-info">
+      <span id="loggedInUsername"></span>
+      <a href="#" onclick="logout()">ログアウト</a>
+    </div>
+    <h1>管理者画面</h1>
+  </header>
+  <p>すべてのユーザーのタスク一覧</p>
+  <div class="task-list" id="adminTasks"></div>
+  
+  <script src="script.js"></script>
+  <script>
+    // 管理者画面用：全タスク取得
+    function loadAdminTasks() {
+      fetch(`${API_URL}/tasks/admin`)
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.message); });
+          }
+          return res.json();
+        })
+        .then(tasks => {
+          const adminTasksContainer = document.getElementById("adminTasks");
+          adminTasksContainer.innerHTML = tasks.length
+            ? tasks.map(task => `
+                <div class="task-card">
+                  <strong>${task.name}</strong> - ${task.description}<br>
+                  <small>期限: ${task.deadline} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
+                  <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
+                </div>
+              `).join("")
+            : "<p>タスクがありません。</p>";
+        })
+        .catch(error => console.error("❌ タスク取得エラー:", error));
+    }
+    document.addEventListener("DOMContentLoaded", function(){
+      const usernameDisplay = document.getElementById("loggedInUsername");
+      if (usernameDisplay) {
+        usernameDisplay.textContent = user.username;
+      }
+      loadAdminTasks();
+    });
+  </script>
+</body>
+</html>

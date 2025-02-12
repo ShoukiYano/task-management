@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="user-info">
+      <span id="loggedInUsername"></span>
+      <a href="#" onclick="logout()">ログアウト</a>
+    </div>
+    <h1>タスク管理</h1>
+  </header>
+  <form>
+    <div class="form-group">
+      <label for="taskName">タスク名</label>
+      <input type="text" id="taskName" placeholder="タスク名">
+    </div>
+    <div class="form-group">
+      <label for="taskDescription">タスク内容</label>
+      <input type="text" id="taskDescription" placeholder="タスク内容">
+    </div>
+    <div class="form-group">
+      <label for="taskDeadline">期限</label>
+      <input type="date" id="taskDeadline">
+    </div>
+    <div class="form-group">
+      <label for="taskStatus">ステータス</label>
+      <select id="taskStatus">
+        <option value="未着手">未着手</option>
+        <option value="進行中">進行中</option>
+        <option value="完了">完了</option>
+        <option value="保留">保留</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="taskPriority">優先度</label>
+      <select id="taskPriority">
+        <option value="低">低</option>
+        <option value="中">中</option>
+        <option value="高">高</option>
+        <option value="緊急">緊急</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="assignee">担当者</label>
+      <select id="assignee"></select>
+    </div>
+    <button type="button" onclick="addTask()">タスク追加</button>
+  </form>
+
+  <div class="task-list" id="tasks"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
