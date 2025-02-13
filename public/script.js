@@ -1,6 +1,6 @@
 // script.js
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://task-management-production-583b.up.railway.app";
 // 現在のページ名を取得（例: "login.html" や "register.html" など）
 const currentPage = window.location.pathname.split("/").pop();
 
