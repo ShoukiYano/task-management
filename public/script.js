@@ -1,21 +1,16 @@
-// script.js
-
 const API_URL = "https://task-management-production-583b.up.railway.app";
-// 現在のページ名を取得（例: "login.html" や "register.html" など）
+
+// 現在のページ名を取得
 const currentPage = window.location.pathname.split("/").pop();
-
-// モーダル表示済みフラグ（同じセッション内で複数回表示しないため）
+// モーダル表示済みフラグ
 let modalShown = false;
-
-// ログインチェック：ログイン画面、登録画面以外ではユーザー情報がなければ login.html にリダイレクト
+// ログインユーザーの確認
 var user = JSON.parse(localStorage.getItem("loggedInUser"));
 if (currentPage !== "login.html" && currentPage !== "register.html" && !user) {
   window.location.href = "login.html";
 }
 
-/* ================================
-   ログイン処理（login.html用）
-=============================================== */
+/* ========= ログイン処理 ========= */
 function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -37,9 +32,7 @@ function login() {
     .catch(error => console.error("ログインエラー:", error));
 }
 
-/* ================================
-   新規登録処理（register.html用）
-=============================================== */
+/* ========= 新規登録処理 ========= */
 function register() {
   const email = document.getElementById("regEmail").value;
   const username = document.getElementById("regUsername").value;
@@ -60,9 +53,7 @@ function register() {
     .catch(error => console.error("登録エラー:", error));
 }
 
-/* ================================
-   担当者プルダウン用：ユーザー一覧取得
-=============================================== */
+/* ========= ユーザー一覧取得（担当者プルダウン用） ========= */
 function loadUsers() {
   fetch(`${API_URL}/users`)
     .then(res => res.json())
@@ -76,7 +67,7 @@ function loadUsers() {
           option.textContent = u.username;
           assigneeSelect.appendChild(option);
         });
-        // 現在のログインユーザーが存在する場合、選択状態にする
+        // 現在のログインユーザーを選択状態にする
         if (user) {
           const currentUserOption = Array.from(assigneeSelect.options).find(
             option => option.value === user.username
@@ -90,9 +81,212 @@ function loadUsers() {
     .catch(error => console.error("ユーザー取得エラー:", error));
 }
 
-/* ================================
-   タスク一覧取得（tasks.html用）
-=============================================== */
+/* ========= 期限間近タスクのモーダル表示 ========= */
+function showDeadlineWarningModal(tasksWithWarning) {
+  const existingModal = document.getElementById('deadlineModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  const modal = document.createElement('div');
+  modal.id = 'deadlineModal';
+  modal.className = 'modal';
+
+  const modalContent = document.createElement('div');
+  modalContent.className = 'modal-content';
+
+  const closeButton = document.createElement('span');
+  closeButton.className = 'close-modal';
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
+
+  const header = document.createElement('h2');
+  header.textContent = '期限間近のタスク';
+
+  const tasksListDiv = document.createElement('div');
+  tasksListDiv.className = 'modal-tasks';
+
+  tasksWithWarning.forEach(task => {
+    const deadlineDate = new Date(task.deadline);
+    const taskItem = document.createElement('div');
+    taskItem.className = 'modal-task-item';
+    taskItem.innerHTML = `<strong>${task.name}</strong> - 期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}`;
+    tasksListDiv.appendChild(taskItem);
+  });
+
+  modalContent.appendChild(closeButton);
+  modalContent.appendChild(header);
+  modalContent.appendChild(tasksListDiv);
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+  modal.style.display = 'block';
+}
+
+/* ========= タスク編集モーダル表示 ========= */
+function showEditTaskModal(task) {
+  // 既存の編集モーダルがあれば削除
+  const existingModal = document.getElementById("editTaskModal");
+  if (existingModal) {
+    existingModal.remove();
+  }
+  const modal = document.createElement("div");
+  modal.id = "editTaskModal";
+  modal.className = "modal";
+
+  const modalContent = document.createElement("div");
+  modalContent.className = "modal-content";
+
+  // 右上の閉じるボタン
+  const closeButton = document.createElement("span");
+  closeButton.className = "close-modal";
+  closeButton.innerHTML = "&times;";
+  closeButton.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
+  const title = document.createElement("h2");
+  title.textContent = "タスク編集";
+
+  // 編集フォームの作成
+  const form = document.createElement("form");
+  form.id = "editTaskForm";
+
+  // タスク名
+  const nameGroup = document.createElement("div");
+  nameGroup.className = "form-group";
+  const nameLabel = document.createElement("label");
+  nameLabel.textContent = "タスク名";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.id = "editTaskName";
+  nameInput.value = task.name;
+  nameGroup.appendChild(nameLabel);
+  nameGroup.appendChild(nameInput);
+
+  // タスク内容
+  const descGroup = document.createElement("div");
+  descGroup.className = "form-group";
+  const descLabel = document.createElement("label");
+  descLabel.textContent = "タスク内容";
+  const descInput = document.createElement("input");
+  descInput.type = "text";
+  descInput.id = "editTaskDescription";
+  descInput.value = task.description;
+  descGroup.appendChild(descLabel);
+  descGroup.appendChild(descInput);
+
+  // 期限
+  const deadlineGroup = document.createElement("div");
+  deadlineGroup.className = "form-group";
+  const deadlineLabel = document.createElement("label");
+  deadlineLabel.textContent = "期限";
+  const deadlineInput = document.createElement("input");
+  deadlineInput.type = "date";
+  deadlineInput.id = "editTaskDeadline";
+  if (task.deadline) {
+    deadlineInput.value = task.deadline.substring(0, 10); // YYYY-MM-DD 形式
+  }
+  deadlineGroup.appendChild(deadlineLabel);
+  deadlineGroup.appendChild(deadlineInput);
+
+  // ステータス
+  const statusGroup = document.createElement("div");
+  statusGroup.className = "form-group";
+  const statusLabel = document.createElement("label");
+  statusLabel.textContent = "ステータス";
+  const statusSelect = document.createElement("select");
+  statusSelect.id = "editTaskStatus";
+  const statuses = ["未着手", "進行中", "完了", "保留"];
+  statuses.forEach(s => {
+    const option = document.createElement("option");
+    option.value = s;
+    option.textContent = s;
+    if (s === task.status) option.selected = true;
+    statusSelect.appendChild(option);
+  });
+  statusGroup.appendChild(statusLabel);
+  statusGroup.appendChild(statusSelect);
+
+  // 優先度
+  const priorityGroup = document.createElement("div");
+  priorityGroup.className = "form-group";
+  const priorityLabel = document.createElement("label");
+  priorityLabel.textContent = "優先度";
+  const prioritySelect = document.createElement("select");
+  prioritySelect.id = "editTaskPriority";
+  const priorities = ["低", "中", "高", "緊急"];
+  priorities.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p;
+    option.textContent = p;
+    if (p === task.priority) option.selected = true;
+    prioritySelect.appendChild(option);
+  });
+  priorityGroup.appendChild(priorityLabel);
+  priorityGroup.appendChild(prioritySelect);
+
+  // 担当者
+  const assigneeGroup = document.createElement("div");
+  assigneeGroup.className = "form-group";
+  const assigneeLabel = document.createElement("label");
+  assigneeLabel.textContent = "担当者";
+  const assigneeInput = document.createElement("input");
+  assigneeInput.type = "text";
+  assigneeInput.id = "editTaskAssignee";
+  assigneeInput.value = task.assignee;
+  assigneeGroup.appendChild(assigneeLabel);
+  assigneeGroup.appendChild(assigneeInput);
+
+  // 更新ボタン
+  const updateButton = document.createElement("button");
+  updateButton.type = "button";
+  updateButton.textContent = "更新";
+  updateButton.addEventListener("click", function() {
+    const updatedTask = {
+      name: document.getElementById("editTaskName").value,
+      description: document.getElementById("editTaskDescription").value,
+      deadline: document.getElementById("editTaskDeadline").value,
+      status: document.getElementById("editTaskStatus").value,
+      priority: document.getElementById("editTaskPriority").value,
+      assignee: document.getElementById("editTaskAssignee").value
+    };
+
+    fetch(`${API_URL}/tasks/${task.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedTask)
+    })
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.message); });
+        }
+        return res.json();
+      })
+      .then(() => {
+        modal.style.display = "none";
+        loadTasks();
+      })
+      .catch(error => console.error("タスク更新エラー:", error));
+  });
+
+  form.appendChild(nameGroup);
+  form.appendChild(descGroup);
+  form.appendChild(deadlineGroup);
+  form.appendChild(statusGroup);
+  form.appendChild(priorityGroup);
+  form.appendChild(assigneeGroup);
+  form.appendChild(updateButton);
+
+  modalContent.appendChild(closeButton);
+  modalContent.appendChild(title);
+  modalContent.appendChild(form);
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+  modal.style.display = "block";
+}
+
+/* ========= タスク一覧取得 ========= */
 function loadTasks() {
   if (!user) return;
   const username = encodeURIComponent(user.username);
@@ -105,8 +299,9 @@ function loadTasks() {
       return res.json();
     })
     .then(tasks => {
-      // 期日が早い順にソート（昇順）
+      // 期日が早い順にソート
       tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      window.tasksList = tasks; // 編集用にグローバル変数に保存
 
       const tasksContainer = document.getElementById("tasks");
       let tasksWithWarning = [];
@@ -126,10 +321,7 @@ function loadTasks() {
               return `
                 <div class="task-card">
                   <strong>${task.name}</strong> - ${task.description}<br>
-                  <small class="${deadlineClass}">
-                    期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
-                    | 優先度: ${task.priority} | ステータス: ${task.status}
-                  </small>
+                  <small class="${deadlineClass}">期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
                   <div class="task-buttons">
                     <button onclick="editTask('${task.id}')">✏️ 編集</button>
@@ -149,64 +341,17 @@ function loadTasks() {
     .catch(error => console.error("❌ タスク取得エラー:", error));
 }
 
-/* ================================
-   モーダルウィンドウ表示（期限が残り2日のタスク）
-=============================================== */
-function showDeadlineWarningModal(tasksWithWarning) {
-  // すでにモーダルが存在する場合は削除
-  const existingModal = document.getElementById('deadlineModal');
-  if (existingModal) {
-    existingModal.remove();
+/* ========= タスク編集（グローバル変数からタスクを取得） ========= */
+function editTask(taskId) {
+  const task = window.tasksList.find(t => t.id === taskId);
+  if (!task) {
+    alert("タスクが見つかりません");
+    return;
   }
-
-  // モーダルのコンテナを作成
-  const modal = document.createElement('div');
-  modal.id = 'deadlineModal';
-  modal.className = 'modal';
-
-  // モーダルの内容を包むコンテナを作成
-  const modalContent = document.createElement('div');
-  modalContent.className = 'modal-content';
-
-  // 右上の閉じるボタン（✕）を作成
-  const closeButton = document.createElement('span');
-  closeButton.className = 'close-modal';
-  closeButton.innerHTML = '&times;';
-  closeButton.addEventListener('click', function() {
-    modal.style.display = 'none';
-  });
-
-  // モーダルのヘッダーを作成
-  const header = document.createElement('h2');
-  header.textContent = '期限間近のタスク';
-
-  // モーダル内にタスク一覧を表示するコンテナを作成
-  const tasksListDiv = document.createElement('div');
-  tasksListDiv.className = 'modal-tasks';
-
-  // 期限間近のタスクを1件ずつ表示
-  tasksWithWarning.forEach(task => {
-    const deadlineDate = new Date(task.deadline);
-    const taskItem = document.createElement('div');
-    taskItem.className = 'modal-task-item';
-    taskItem.innerHTML = `<strong>${task.name}</strong> - 期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}`;
-    tasksListDiv.appendChild(taskItem);
-  });
-
-  // モーダルの要素を組み立てる
-  modalContent.appendChild(closeButton);
-  modalContent.appendChild(header);
-  modalContent.appendChild(tasksListDiv);
-  modal.appendChild(modalContent);
-  document.body.appendChild(modal);
-
-  // モーダルを表示
-  modal.style.display = 'block';
+  showEditTaskModal(task);
 }
 
-/* ================================
-   タスク追加（tasks.html用）
-=============================================== */
+/* ========= タスク追加 ========= */
 function addTask() {
   if (!user) return;
   const newTask = {
@@ -231,7 +376,7 @@ function addTask() {
       return res.json();
     })
     .then(() => {
-      // 入力欄をクリアし、タスク一覧を再読み込み
+      // 入力欄をクリアしてタスク一覧を再読み込み
       document.getElementById("taskName").value = "";
       document.getElementById("taskDescription").value = "";
       document.getElementById("taskDeadline").value = "";
@@ -240,50 +385,7 @@ function addTask() {
     .catch(error => console.error("タスク追加エラー:", error));
 }
 
-/* ================================
-   タスク編集（簡易的な実装例：prompt利用）
-=============================================== */
-function editTask(taskId) {
-  const newName = prompt("新しいタスク名を入力してください:");
-  if (newName === null) return;
-  const newDescription = prompt("新しいタスク内容を入力してください:");
-  if (newDescription === null) return;
-  const newDeadline = prompt("新しい期限 (YYYY-MM-DD) を入力してください:");
-  if (newDeadline === null) return;
-  const newStatus = prompt("新しいステータスを入力してください (未着手 / 進行中 / 完了 / 保留):");
-  if (newStatus === null) return;
-  const newPriority = prompt("新しい優先度を入力してください (低 / 中 / 高 / 緊急):");
-  if (newPriority === null) return;
-  const newAssignee = prompt("新しい担当者のユーザー名を入力してください:");
-  if (newAssignee === null) return;
-
-  const updatedTask = {
-    name: newName,
-    description: newDescription,
-    deadline: newDeadline,
-    status: newStatus,
-    priority: newPriority,
-    assignee: newAssignee
-  };
-
-  fetch(`${API_URL}/tasks/${taskId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updatedTask)
-  })
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
-      }
-      return res.json();
-    })
-    .then(() => loadTasks())
-    .catch(error => console.error("タスク更新エラー:", error));
-}
-
-/* ================================
-   タスク削除
-=============================================== */
+/* ========= タスク削除 ========= */
 function deleteTask(taskId) {
   if (!confirm("タスクを削除してもよろしいですか？")) return;
 
@@ -300,53 +402,18 @@ function deleteTask(taskId) {
     .catch(error => console.error("タスク削除エラー:", error));
 }
 
-/* ================================
-   管理者用：全タスク一覧取得（admin.html用）
-=============================================== */
-function loadAdminTasks() {
-  fetch(`${API_URL}/tasks/admin`)
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
-      }
-      return res.json();
-    })
-    .then(tasks => {
-      const adminTasksContainer = document.getElementById("adminTasks");
-      if (adminTasksContainer) {
-        adminTasksContainer.innerHTML = tasks.length
-          ? tasks.map(task => `
-              <div class="task-card">
-                <strong>${task.name}</strong> - ${task.description}<br>
-                <small>期限: ${task.deadline} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
-                <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
-              </div>
-            `).join("")
-          : "<p>タスクがありません。</p>";
-      }
-    })
-    .catch(error => console.error("❌ タスク取得エラー:", error));
-}
-
-/* ================================
-   ログアウト処理
-=============================================== */
+/* ========= ログアウト ========= */
 function logout() {
   localStorage.removeItem("loggedInUser");
   window.location.href = "login.html";
 }
 
-/* ================================
-   DOMContentLoaded時の初期処理
-   ※タスク管理画面(tasks.html)や管理者画面(admin.html)の場合
-=============================================== */
+/* ========= DOMContentLoaded 時の初期処理 ========= */
 document.addEventListener("DOMContentLoaded", function () {
-  // ログインユーザー名を表示（存在する場合）
   const usernameDisplay = document.getElementById("loggedInUsername");
   if (usernameDisplay && user) {
     usernameDisplay.textContent = user.username;
   }
-  // タスク管理画面用：担当者プルダウンとタスク一覧を読み込む
   if (document.getElementById("assignee")) {
     loadUsers();
   }
