@@ -87,7 +87,7 @@ header .user-info {
 
 /* ★ フォームグループ ★ */
 .form-group {
-  margin-bottom: -105px;
+  margin-bottom: 15px;
 }
 .form-group label {
   display: block;
@@ -179,6 +179,9 @@ form .form-group {
   form {
     flex-direction: column;
     align-items: stretch;
+  }
+  .form-group {
+    margin-bottom: -105px;
   }
 }
 
