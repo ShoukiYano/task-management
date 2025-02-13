@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
@@ -12,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static("public"));
 
-// 🔹 ログイン API
+// ログイン API
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -33,7 +32,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 🔹 新規ユーザー登録 API
+// 新規ユーザー登録 API
 app.post('/register', async (req, res) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
@@ -56,7 +55,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// 🔹 ユーザー一覧取得 API（担当者プルダウン用）
+// ユーザー一覧取得 API
 app.get('/users', async (req, res) => {
   try {
     const result = await pool.query("SELECT username, email FROM users");
@@ -67,7 +66,7 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// 🔹 タスク取得 API（作成者・担当者・管理者のみ表示）
+// タスク取得 API
 app.get('/tasks/:username', async (req, res) => {
   const username = decodeURIComponent(req.params.username);
   if (!username) {
@@ -85,7 +84,7 @@ app.get('/tasks/:username', async (req, res) => {
   }
 });
 
-// 🔹 タスク追加 API
+// タスク追加 API
 app.post('/tasks', async (req, res) => {
   const { name, description, status, priority, assignee, creator, deadline } = req.body;
   if (!name || !description || !status || !priority || !assignee || !creator || !deadline) {
@@ -105,12 +104,11 @@ app.post('/tasks', async (req, res) => {
   }
 });
 
-// 🔹 タスク更新 API
+// タスク更新 API
 app.put('/tasks/:id', async (req, res) => {
   const taskId = req.params.id;
   const { name, description, status, priority, assignee, deadline } = req.body;
   try {
-    // まずタスクが存在するかチェック
     const taskResult = await pool.query("SELECT * FROM tasks WHERE id = $1", [taskId]);
     if (taskResult.rows.length === 0) {
       return res.status(404).json({ message: "タスクが見つかりません" });
@@ -135,7 +133,7 @@ app.put('/tasks/:id', async (req, res) => {
   }
 });
 
-// 🔹 タスク削除 API
+// タスク削除 API
 app.delete('/tasks/:id', async (req, res) => {
   const taskId = req.params.id;
   try {
