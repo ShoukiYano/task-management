@@ -87,7 +87,7 @@ header .user-info {
 
 /* ★ フォームグループ ★ */
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: -105px;
 }
 .form-group label {
   display: block;

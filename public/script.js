@@ -124,7 +124,7 @@ function showDeadlineWarningModal(tasksWithWarning) {
 
 /* ========= タスク編集モーダル表示 ========= */
 function showEditTaskModal(task) {
-  // Remove existing modal if present
+  // 既存の編集モーダルがあれば削除
   const existingModal = document.getElementById("editTaskModal");
   if (existingModal) {
     existingModal.remove();
@@ -136,7 +136,7 @@ function showEditTaskModal(task) {
   const modalContent = document.createElement("div");
   modalContent.className = "modal-content";
 
-  // Close button
+  // 閉じるボタン
   const closeButton = document.createElement("span");
   closeButton.className = "close-modal";
   closeButton.innerHTML = "&times;";
@@ -147,11 +147,11 @@ function showEditTaskModal(task) {
   const title = document.createElement("h2");
   title.textContent = "タスク編集";
 
-  // Create form
+  // 編集フォームの作成
   const form = document.createElement("form");
   form.id = "editTaskForm";
 
-  // Task Name
+  // タスク名
   const nameGroup = document.createElement("div");
   nameGroup.className = "form-group";
   const nameLabel = document.createElement("label");
@@ -163,7 +163,7 @@ function showEditTaskModal(task) {
   nameGroup.appendChild(nameLabel);
   nameGroup.appendChild(nameInput);
 
-  // Task Description
+  // タスク内容
   const descGroup = document.createElement("div");
   descGroup.className = "form-group";
   const descLabel = document.createElement("label");
@@ -175,7 +175,7 @@ function showEditTaskModal(task) {
   descGroup.appendChild(descLabel);
   descGroup.appendChild(descInput);
 
-  // Deadline
+  // 期限
   const deadlineGroup = document.createElement("div");
   deadlineGroup.className = "form-group";
   const deadlineLabel = document.createElement("label");
@@ -189,7 +189,7 @@ function showEditTaskModal(task) {
   deadlineGroup.appendChild(deadlineLabel);
   deadlineGroup.appendChild(deadlineInput);
 
-  // Status
+  // ステータス
   const statusGroup = document.createElement("div");
   statusGroup.className = "form-group";
   const statusLabel = document.createElement("label");
@@ -207,7 +207,7 @@ function showEditTaskModal(task) {
   statusGroup.appendChild(statusLabel);
   statusGroup.appendChild(statusSelect);
 
-  // Priority
+  // 優先度
   const priorityGroup = document.createElement("div");
   priorityGroup.className = "form-group";
   const priorityLabel = document.createElement("label");
@@ -225,19 +225,32 @@ function showEditTaskModal(task) {
   priorityGroup.appendChild(priorityLabel);
   priorityGroup.appendChild(prioritySelect);
 
-  // Assignee
+  // 担当者（プルダウンで選択）
   const assigneeGroup = document.createElement("div");
   assigneeGroup.className = "form-group";
   const assigneeLabel = document.createElement("label");
   assigneeLabel.textContent = "担当者";
-  const assigneeInput = document.createElement("input");
-  assigneeInput.type = "text";
-  assigneeInput.id = "editTaskAssignee";
-  assigneeInput.value = task.assignee;
+  const assigneeSelect = document.createElement("select");
+  assigneeSelect.id = "editTaskAssignee";
+  // 担当者の選択肢はサーバーから取得
+  fetch(`${API_URL}/users`)
+    .then(res => res.json())
+    .then(users => {
+      users.forEach(u => {
+        const option = document.createElement("option");
+        option.value = u.username;
+        option.textContent = u.username;
+        if (u.username === task.assignee) {
+          option.selected = true;
+        }
+        assigneeSelect.appendChild(option);
+      });
+    })
+    .catch(error => console.error("担当者取得エラー:", error));
   assigneeGroup.appendChild(assigneeLabel);
-  assigneeGroup.appendChild(assigneeInput);
+  assigneeGroup.appendChild(assigneeSelect);
 
-  // Update Button
+  // 更新ボタン
   const updateButton = document.createElement("button");
   updateButton.type = "button";
   updateButton.textContent = "更新";
