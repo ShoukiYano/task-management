@@ -179,11 +179,10 @@ form .form-group {
   form {
     flex-direction: column;
     align-items: stretch;
-    width: 450px;
   }
   .form-group {
-    margin-bottom: -125px;
-  }
+  margin-bottom: -105px;
+}
 }
 
 /* ★ モーダルウィンドウ ★ */
