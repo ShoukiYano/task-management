@@ -105,15 +105,18 @@ function loadTasks() {
       return res.json();
     })
     .then(tasks => {
+      // 期日が早い順にソート（昇順）
+      tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
       const tasksContainer = document.getElementById("tasks");
-      let tasksWithWarning = []; // 期限まで2日以内のタスクを格納する配列
+      let tasksWithWarning = [];
 
       if (tasksContainer) {
         tasksContainer.innerHTML = tasks.length
           ? tasks.map(task => {
               const deadlineDate = new Date(task.deadline);
               const today = new Date();
-              today.setHours(0, 0, 0, 0); // 日付のみ比較
+              today.setHours(0, 0, 0, 0);
               const diffTime = deadlineDate - today;
               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
               if (diffDays <= 2) {
@@ -123,7 +126,10 @@ function loadTasks() {
               return `
                 <div class="task-card">
                   <strong>${task.name}</strong> - ${task.description}<br>
-                  <small class="${deadlineClass}">期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
+                  <small class="${deadlineClass}">
+                    期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
+                    | 優先度: ${task.priority} | ステータス: ${task.status}
+                  </small>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
                   <div class="task-buttons">
                     <button onclick="editTask('${task.id}')">✏️ 編集</button>
@@ -135,7 +141,6 @@ function loadTasks() {
           : "<p>タスクがありません。</p>";
       }
 
-      // 期限が迫っているタスクが存在し、まだモーダルを表示していなければ表示
       if (tasksWithWarning.length > 0 && !modalShown) {
         modalShown = true;
         showDeadlineWarningModal(tasksWithWarning);
