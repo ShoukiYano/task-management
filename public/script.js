@@ -67,7 +67,6 @@ function loadUsers() {
           option.textContent = u.username;
           assigneeSelect.appendChild(option);
         });
-        // 現在のログインユーザーを選択状態にする
         if (user) {
           const currentUserOption = Array.from(assigneeSelect.options).find(
             option => option.value === user.username
@@ -97,7 +96,7 @@ function showDeadlineWarningModal(tasksWithWarning) {
   const closeButton = document.createElement('span');
   closeButton.className = 'close-modal';
   closeButton.innerHTML = '&times;';
-  closeButton.addEventListener('click', function() {
+  closeButton.addEventListener('click', () => {
     modal.style.display = 'none';
   });
 
@@ -120,12 +119,12 @@ function showDeadlineWarningModal(tasksWithWarning) {
   modalContent.appendChild(tasksListDiv);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
-  modal.style.display = 'block';
+  modal.style.display = 'flex';
 }
 
 /* ========= タスク編集モーダル表示 ========= */
 function showEditTaskModal(task) {
-  // 既存の編集モーダルがあれば削除
+  // Remove existing modal if present
   const existingModal = document.getElementById("editTaskModal");
   if (existingModal) {
     existingModal.remove();
@@ -137,7 +136,7 @@ function showEditTaskModal(task) {
   const modalContent = document.createElement("div");
   modalContent.className = "modal-content";
 
-  // 右上の閉じるボタン
+  // Close button
   const closeButton = document.createElement("span");
   closeButton.className = "close-modal";
   closeButton.innerHTML = "&times;";
@@ -148,11 +147,11 @@ function showEditTaskModal(task) {
   const title = document.createElement("h2");
   title.textContent = "タスク編集";
 
-  // 編集フォームの作成
+  // Create form
   const form = document.createElement("form");
   form.id = "editTaskForm";
 
-  // タスク名
+  // Task Name
   const nameGroup = document.createElement("div");
   nameGroup.className = "form-group";
   const nameLabel = document.createElement("label");
@@ -164,7 +163,7 @@ function showEditTaskModal(task) {
   nameGroup.appendChild(nameLabel);
   nameGroup.appendChild(nameInput);
 
-  // タスク内容
+  // Task Description
   const descGroup = document.createElement("div");
   descGroup.className = "form-group";
   const descLabel = document.createElement("label");
@@ -176,7 +175,7 @@ function showEditTaskModal(task) {
   descGroup.appendChild(descLabel);
   descGroup.appendChild(descInput);
 
-  // 期限
+  // Deadline
   const deadlineGroup = document.createElement("div");
   deadlineGroup.className = "form-group";
   const deadlineLabel = document.createElement("label");
@@ -185,12 +184,12 @@ function showEditTaskModal(task) {
   deadlineInput.type = "date";
   deadlineInput.id = "editTaskDeadline";
   if (task.deadline) {
-    deadlineInput.value = task.deadline.substring(0, 10); // YYYY-MM-DD 形式
+    deadlineInput.value = task.deadline.substring(0, 10);
   }
   deadlineGroup.appendChild(deadlineLabel);
   deadlineGroup.appendChild(deadlineInput);
 
-  // ステータス
+  // Status
   const statusGroup = document.createElement("div");
   statusGroup.className = "form-group";
   const statusLabel = document.createElement("label");
@@ -208,7 +207,7 @@ function showEditTaskModal(task) {
   statusGroup.appendChild(statusLabel);
   statusGroup.appendChild(statusSelect);
 
-  // 優先度
+  // Priority
   const priorityGroup = document.createElement("div");
   priorityGroup.className = "form-group";
   const priorityLabel = document.createElement("label");
@@ -226,7 +225,7 @@ function showEditTaskModal(task) {
   priorityGroup.appendChild(priorityLabel);
   priorityGroup.appendChild(prioritySelect);
 
-  // 担当者
+  // Assignee
   const assigneeGroup = document.createElement("div");
   assigneeGroup.className = "form-group";
   const assigneeLabel = document.createElement("label");
@@ -238,7 +237,7 @@ function showEditTaskModal(task) {
   assigneeGroup.appendChild(assigneeLabel);
   assigneeGroup.appendChild(assigneeInput);
 
-  // 更新ボタン
+  // Update Button
   const updateButton = document.createElement("button");
   updateButton.type = "button";
   updateButton.textContent = "更新";
@@ -283,7 +282,7 @@ function showEditTaskModal(task) {
   modalContent.appendChild(form);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
-  modal.style.display = "block";
+  modal.style.display = "flex";
 }
 
 /* ========= タスク一覧取得 ========= */
@@ -318,10 +317,27 @@ function loadTasks() {
                 tasksWithWarning.push(task);
               }
               const deadlineClass = diffDays <= 2 ? 'deadline-warning' : '';
+
+              // ステータス別クラス
+              let statusClass = "";
+              if (task.status === "未着手") {
+                statusClass = "status-not-started";
+              } else if (task.status === "進行中") {
+                statusClass = "status-in-progress";
+              } else if (task.status === "完了") {
+                statusClass = "status-completed";
+              } else if (task.status === "保留") {
+                statusClass = "status-on-hold";
+              }
+
               return `
                 <div class="task-card">
                   <strong>${task.name}</strong> - ${task.description}<br>
-                  <small class="${deadlineClass}">期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
+                  <small class="${deadlineClass}">
+                    期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })} |
+                    優先度: ${task.priority} |
+                    ステータス: <span class="${statusClass}">${task.status}</span>
+                  </small>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
                   <div class="task-buttons">
                     <button onclick="editTask('${task.id}')">✏️ 編集</button>
@@ -376,7 +392,6 @@ function addTask() {
       return res.json();
     })
     .then(() => {
-      // 入力欄をクリアしてタスク一覧を再読み込み
       document.getElementById("taskName").value = "";
       document.getElementById("taskDescription").value = "";
       document.getElementById("taskDeadline").value = "";
