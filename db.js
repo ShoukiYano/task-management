@@ -1,5 +1,4 @@
 // db.js
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";  // これを追加
 
 const { Pool } = require('pg');
 
