@@ -200,32 +200,6 @@ const pool = new Pool({
   connectionString: "postgresql://postgres:XmuQMfyOkrrugmLpWFweqzidUqlozhsq@viaduct.proxy.rlwy.net:18155/railway?sslmode=require"
 });
 
-// ★ サーバー起動時にテーブルがなければ作成
-pool.query(`
-  CREATE TABLE IF NOT EXISTS meetings (
-    id UUID PRIMARY KEY,
-    meeting_date TIMESTAMP NOT NULL,
-    location TEXT,
-    interviewer TEXT NOT NULL,
-    interviewee TEXT NOT NULL,
-    interviewee_name TEXT,
-    interviewee_affiliation TEXT,
-    interviewee_position TEXT,
-    job_description TEXT,
-    goal TEXT,
-    goal_status TEXT,
-    actions_taken TEXT,
-    successful_results TEXT,
-    challenges TEXT,
-    feedback TEXT,
-    next_action TEXT,
-    next_goal TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-  )
-`)
-.then(() => console.log("✅ meetingsテーブルの準備完了"))
-.catch(err => console.error("meetingsテーブル作成エラー:", err));
 
 // 🔹 面談追加 API
 app.post('/meetings', async (req, res) => {
