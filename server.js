@@ -10,7 +10,8 @@ const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 
 const app = express();
-const PORT = 3000;
+// const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const USERS_FILE = 'users.json';
 const TASKS_FILE = 'tasks.json';
 
