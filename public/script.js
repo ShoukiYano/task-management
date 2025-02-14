@@ -26,7 +26,7 @@ function login() {
     .then(data => {
       if (data.username) {
         localStorage.setItem("loggedInUser", JSON.stringify(data));
-        window.location.href = (data.username === "admin") ? "admin.html" : "select.html";
+        window.location.href = (data.username === "admin") ? "admin.html" : "tasks.html";
       } else {
         alert("ログイン失敗");
       }

@@ -4,5 +4,11 @@
     "email": "admin@driveline.jp",
     "username": "admin",
     "password": "$2b$10$iTjPqF8Y8N83WXUFHasCsugHFHoG4Eh2ZIO6NsjZB3Y9JUqttISAq"
+  },
+  {
+    "id": "dc2ccfe2-b2f4-4bbb-bc31-924c203420b6",
+    "email": "s.yano@driveline.jp",
+    "username": "矢野常貴",
+    "password": "$2b$10$aXbhSjEH26ss2IM.sVzYVOCg0kmNDB71NE4CyCAPU8SSv8MDFWa.G"
   }
 ]
