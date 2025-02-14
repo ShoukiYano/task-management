@@ -341,9 +341,10 @@ function addMeeting() {
   const interviewee = document.getElementById("interviewee").value;
   const meetingDate = document.getElementById("meetingDate").value;
   const locationVal = document.getElementById("location").value;
-  const intervieweeName = document.getElementById("name").value;
-  const intervieweeAffiliation = document.getElementById("affiliation").value;
-  const intervieweePosition = document.getElementById("position").value;
+  // ※面談者情報の入力フィールドが存在しない場合は不要です
+  // const intervieweeName = document.getElementById("name").value;
+  // const intervieweeAffiliation = document.getElementById("affiliation").value;
+  // const intervieweePosition = document.getElementById("position").value;
   const jobDescription = document.getElementById("jobDescription").value;
   const goal = document.getElementById("goal").value;
   const goalStatus = document.getElementById("goalStatus").value;
@@ -359,9 +360,10 @@ function addMeeting() {
     location: locationVal,
     interviewer,
     interviewee,
-    interviewee_name: intervieweeName,
-    interviewee_affiliation: intervieweeAffiliation,
-    interviewee_position: intervieweePosition,
+    // 面談者情報が必要な場合は以下のように追加（フォームに対応する入力があることを確認してください）:
+    // interviewee_name: intervieweeName,
+    // interviewee_affiliation: intervieweeAffiliation,
+    // interviewee_position: intervieweePosition,
     job_description: jobDescription,
     goal,
     goal_status: goalStatus,
@@ -387,10 +389,12 @@ function addMeeting() {
   .then(data => {
     alert("面談が作成されました");
     document.getElementById("createMeetingForm").reset();
-    loadMeetings();
+    // 作成後、一覧タブに切り替え、最新情報を再取得
+    showTab('list');
   })
   .catch(err => console.error("Error creating meeting:", err));
 }
+
 
 function editMeeting(meetingId) {
   const newMeetingDate = prompt("新しい面談日 (YYYY-MM-DD):");
