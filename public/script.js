@@ -1,6 +1,6 @@
 // script.js
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://task-management-production-583b.up.railway.app";
 const currentPage = window.location.pathname.split("/").pop();
 
 let modalShown = false;
