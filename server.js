@@ -1,154 +1,350 @@
+// server.js
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const { pool } = require('./db'); // db.js から接続プールを読み込み
+const bcrypt = require('bcrypt');
+
+// ★ PostgreSQL モジュール（面談管理用）
+const { Pool } = require('pg');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+const USERS_FILE = 'users.json';
+const TASKS_FILE = 'tasks.json';
 
 app.use(express.json());
 app.use(cors());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ログイン API
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+// ユーティリティ関数（JSONファイル用）
+const loadData = (file) => {
   try {
-    const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ message: "ユーザーが見つかりません" });
-    }
-    const user = userResult.rows[0];
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({ message: "パスワードが正しくありません" });
-    }
-    console.log(`✅ ログイン成功 - ユーザー名: ${user.username}`);
-    res.json({ username: user.username, email: user.email });
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "ログイン中にエラーが発生しました" });
+    return [];
   }
+};
+
+const saveData = (file, data) => {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+};
+
+// 初回データ作成（管理者ユーザー）
+if (!fs.existsSync(USERS_FILE)) {
+  bcrypt.hash("admin", 10, (err, hash) => {
+    if (err) throw err;
+    saveData(USERS_FILE, [{
+      id: uuidv4(),
+      email: "admin@driveline.jp",
+      username: "admin",
+      password: hash
+    }]);
+  });
+}
+if (!fs.existsSync(TASKS_FILE)) {
+  saveData(TASKS_FILE, []);
+}
+
+/* ================================
+   既存のユーザー／タスク管理API
+================================ */
+
+// 🔹 ログイン API
+app.post('/login', async (req, res) => {
+  const users = loadData(USERS_FILE);
+  const { email, password } = req.body;
+  const user = users.find(u => u.email === email);
+
+  if (!user) {
+    return res.status(401).json({ message: "ユーザーが見つかりません" });
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
+    return res.status(401).json({ message: "パスワードが正しくありません" });
+  }
+
+  console.log(`✅ ログイン成功 - ユーザー名: ${user.username}`);
+  res.json({ username: user.username, email: user.email });
 });
 
-// 新規ユーザー登録 API
+// 🔹 新規ユーザー登録 API
 app.post('/register', async (req, res) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
     return res.status(400).json({ message: "全てのフィールドを入力してください" });
   }
+  const users = loadData(USERS_FILE);
+  const existingUser = users.find(u => u.email === email || u.username === username);
+  if (existingUser) {
+    return res.status(400).json({ message: "ユーザーは既に存在します" });
+  }
+
   try {
-    const userExists = await pool.query("SELECT * FROM users WHERE email = $1 OR username = $2", [email, username]);
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ message: "ユーザーは既に存在します" });
-    }
     const hash = await bcrypt.hash(password, 10);
-    const newUserResult = await pool.query(
-      "INSERT INTO users (id, email, username, password) VALUES ($1, $2, $3, $4) RETURNING *",
-      [uuidv4(), email, username, hash]
-    );
-    res.status(201).json({ message: "登録成功！", user: newUserResult.rows[0] });
+    const newUser = {
+      id: uuidv4(),
+      email,
+      username,
+      password: hash
+    };
+    users.push(newUser);
+    saveData(USERS_FILE, users);
+    res.status(201).json({ message: "登録成功！" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "登録中にエラーが発生しました" });
   }
 });
 
-// ユーザー一覧取得 API
-app.get('/users', async (req, res) => {
-  try {
-    const result = await pool.query("SELECT username, email FROM users");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "ユーザー取得エラー" });
-  }
+// 🔹 ユーザー一覧取得 API（担当者プルダウン用）
+app.get('/users', (req, res) => {
+  const users = loadData(USERS_FILE);
+  const usersInfo = users.map(user => ({ username: user.username, email: user.email }));
+  res.json(usersInfo);
 });
 
-// タスク取得 API
-app.get('/tasks/:username', async (req, res) => {
+// 🔹 タスク取得 API（作成者・担当者・管理者のみ表示）
+app.get('/tasks/:username', (req, res) => {
+  const tasks = loadData(TASKS_FILE);
   const username = decodeURIComponent(req.params.username);
+
+  console.log(`🔹 タスクを取得 - ユーザー名: ${username}`);
+
   if (!username) {
     return res.status(400).json({ message: "ユーザー名が指定されていません" });
   }
-  try {
-    const result = await pool.query(
-      `SELECT * FROM tasks WHERE creator = $1 OR assignee = $1 OR $1 = 'admin'`,
-      [username]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "タスク取得エラー" });
-  }
+
+  const filteredTasks = tasks.filter(task =>
+    task.creator === username || task.assignee === username || username === "admin"
+  );
+
+  res.json(filteredTasks);
 });
 
-// タスク追加 API
-app.post('/tasks', async (req, res) => {
+// 🔹 タスク追加 API
+app.post('/tasks', (req, res) => {
+  const tasks = loadData(TASKS_FILE);
   const { name, description, status, priority, assignee, creator, deadline } = req.body;
+
   if (!name || !description || !status || !priority || !assignee || !creator || !deadline) {
     return res.status(400).json({ message: "すべてのフィールドを入力してください" });
   }
-  try {
-    const now = new Date().toISOString();
-    const result = await pool.query(
-      `INSERT INTO tasks (id, name, description, status, priority, assignee, creator, deadline, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) RETURNING *`,
-      [uuidv4(), name, description, status, priority, assignee, creator, deadline, now]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "タスク追加エラー" });
-  }
+
+  const now = new Date().toISOString();
+  const newTask = {
+    id: uuidv4(),
+    name,
+    description,
+    status,
+    priority,
+    assignee,
+    creator,
+    deadline,
+    created_at: now,
+    updated_at: now
+  };
+
+  tasks.push(newTask);
+  saveData(TASKS_FILE, tasks);
+  res.status(201).json(newTask);
 });
 
-// タスク更新 API
-app.put('/tasks/:id', async (req, res) => {
+// 🔹 タスク更新 API
+app.put('/tasks/:id', (req, res) => {
+  const tasks = loadData(TASKS_FILE);
   const taskId = req.params.id;
+  const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+  if (taskIndex === -1) {
+    return res.status(404).json({ message: "タスクが見つかりません" });
+  }
+
   const { name, description, status, priority, assignee, deadline } = req.body;
+
+  if (name) tasks[taskIndex].name = name;
+  if (description) tasks[taskIndex].description = description;
+  if (status) tasks[taskIndex].status = status;
+  if (priority) tasks[taskIndex].priority = priority;
+  if (assignee) tasks[taskIndex].assignee = assignee;
+  if (deadline) tasks[taskIndex].deadline = deadline;
+  tasks[taskIndex].updated_at = new Date().toISOString();
+
+  saveData(TASKS_FILE, tasks);
+  res.json(tasks[taskIndex]);
+});
+
+// 🔹 タスク削除 API
+app.delete('/tasks/:id', (req, res) => {
+  let tasks = loadData(TASKS_FILE);
+  const taskId = req.params.id;
+  const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+  if (taskIndex === -1) {
+    return res.status(404).json({ message: "タスクが見つかりません" });
+  }
+
+  tasks.splice(taskIndex, 1);
+  saveData(TASKS_FILE, tasks);
+  res.json({ message: "タスクが削除されました" });
+});
+
+/* ================================
+   面談管理機能（Meeting Management）
+   PostgreSQL を利用して面談情報を保存
+================================ */
+
+// ★ PostgreSQL用プールの作成（接続文字列を必要に応じて変更）
+const pool = new Pool({
+  connectionString: "postgresql://postgres:XmuQMfyOkrrugmLpWFweqzidUqlozhsq@viaduct.proxy.rlwy.net:18155/railway?sslmode=require"
+});
+
+// ★ サーバー起動時にテーブルがなければ作成
+pool.query(`
+  CREATE TABLE IF NOT EXISTS meetings (
+    id UUID PRIMARY KEY,
+    meeting_date TIMESTAMP NOT NULL,
+    location TEXT,
+    interviewer TEXT NOT NULL,
+    interviewee TEXT NOT NULL,
+    interviewee_name TEXT,
+    interviewee_affiliation TEXT,
+    interviewee_position TEXT,
+    job_description TEXT,
+    goal TEXT,
+    goal_status TEXT,
+    actions_taken TEXT,
+    successful_results TEXT,
+    challenges TEXT,
+    feedback TEXT,
+    next_action TEXT,
+    next_goal TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+  )
+`)
+.then(() => console.log("✅ meetingsテーブルの準備完了"))
+.catch(err => console.error("meetingsテーブル作成エラー:", err));
+
+// 🔹 面談追加 API
+app.post('/meetings', async (req, res) => {
+  const {
+    meeting_date, location, interviewer, interviewee,
+    interviewee_name, interviewee_affiliation, interviewee_position,
+    job_description, goal, goal_status,
+    actions_taken, successful_results, challenges,
+    feedback, next_action, next_goal
+  } = req.body;
+  
+  if (!meeting_date || !interviewer || !interviewee) {
+    return res.status(400).json({ message: "必要なフィールドが不足しています" });
+  }
+  
+  const now = new Date();
+  const id = uuidv4();
   try {
-    const taskResult = await pool.query("SELECT * FROM tasks WHERE id = $1", [taskId]);
-    if (taskResult.rows.length === 0) {
-      return res.status(404).json({ message: "タスクが見つかりません" });
-    }
-    const now = new Date().toISOString();
-    const updatedTaskResult = await pool.query(
-      `UPDATE tasks SET
-         name = COALESCE($2, name),
-         description = COALESCE($3, description),
-         status = COALESCE($4, status),
-         priority = COALESCE($5, priority),
-         assignee = COALESCE($6, assignee),
-         deadline = COALESCE($7, deadline),
-         updated_at = $8
-       WHERE id = $1 RETURNING *`,
-      [taskId, name, description, status, priority, assignee, deadline, now]
-    );
-    res.json(updatedTaskResult.rows[0]);
-  } catch (err) {
+    const result = await pool.query(`
+      INSERT INTO meetings (
+        id, meeting_date, location, interviewer, interviewee,
+        interviewee_name, interviewee_affiliation, interviewee_position,
+        job_description, goal, goal_status, actions_taken,
+        successful_results, challenges, feedback, next_action, next_goal,
+        created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      RETURNING *
+    `, [
+      id, meeting_date, location, interviewer, interviewee,
+      interviewee_name, interviewee_affiliation, interviewee_position,
+      job_description, goal, goal_status, actions_taken,
+      successful_results, challenges, feedback, next_action, next_goal,
+      now, now
+    ]);
+    res.status(201).json(result.rows[0]);
+  } catch(err) {
     console.error(err);
-    res.status(500).json({ message: "タスク更新エラー" });
+    res.status(500).json({ message: "面談作成中にエラーが発生しました" });
   }
 });
 
-// タスク削除 API
-app.delete('/tasks/:id', async (req, res) => {
-  const taskId = req.params.id;
+// 🔹 面談取得 API
+// ログインユーザー（担当者または面談者）の面談情報を返す。adminの場合は全件取得
+app.get('/meetings/:username', async (req, res) => {
+  const username = req.params.username;
   try {
-    const taskResult = await pool.query("SELECT * FROM tasks WHERE id = $1", [taskId]);
-    if (taskResult.rows.length === 0) {
-      return res.status(404).json({ message: "タスクが見つかりません" });
+    let query, params;
+    if (username === 'admin') {
+      query = `SELECT * FROM meetings ORDER BY meeting_date DESC`;
+      params = [];
+    } else {
+      query = `SELECT * FROM meetings WHERE interviewer = $1 OR interviewee = $1 ORDER BY meeting_date DESC`;
+      params = [username];
     }
-    await pool.query("DELETE FROM tasks WHERE id = $1", [taskId]);
-    res.json({ message: "タスクが削除されました" });
-  } catch (err) {
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch(err) {
     console.error(err);
-    res.status(500).json({ message: "タスク削除エラー" });
+    res.status(500).json({ message: "面談情報取得エラー" });
+  }
+});
+
+// 🔹 面談更新 API
+app.put('/meetings/:id', async (req, res) => {
+  const meetingId = req.params.id;
+  const fields = [
+    'meeting_date', 'location', 'interviewer', 'interviewee',
+    'interviewee_name', 'interviewee_affiliation', 'interviewee_position',
+    'job_description', 'goal', 'goal_status', 'actions_taken',
+    'successful_results', 'challenges', 'feedback', 'next_action', 'next_goal'
+  ];
+  
+  let idx = 1;
+  const setParts = [];
+  const params = [];
+  for (const field of fields) {
+    if (req.body[field] !== undefined) {
+      setParts.push(`${field} = $${idx}`);
+      params.push(req.body[field]);
+      idx++;
+    }
+  }
+  if (setParts.length === 0) {
+    return res.status(400).json({ message: "更新するフィールドがありません" });
+  }
+  setParts.push(`updated_at = $${idx}`);
+  params.push(new Date());
+  
+  const query = `UPDATE meetings SET ${setParts.join(', ')} WHERE id = $${idx+1} RETURNING *`;
+  params.push(meetingId);
+  
+  try {
+    const result = await pool.query(query, params);
+    if(result.rows.length === 0) {
+      return res.status(404).json({ message: "面談が見つかりません" });
+    }
+    res.json(result.rows[0]);
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ message: "面談更新中にエラーが発生しました" });
+  }
+});
+
+// 🔹 面談削除 API
+app.delete('/meetings/:id', async (req, res) => {
+  const meetingId = req.params.id;
+  try {
+    const result = await pool.query(`DELETE FROM meetings WHERE id = $1 RETURNING *`, [meetingId]);
+    if(result.rowCount === 0) {
+      return res.status(404).json({ message: "面談が見つかりません" });
+    }
+    res.json({ message: "面談が削除されました" });
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ message: "面談削除中にエラーが発生しました" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Server is running on port ${PORT}`);
+  console.log(`✅ Server is running on http://localhost:${PORT}`);
 });

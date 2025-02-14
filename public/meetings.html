@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面談管理</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 面談管理画面用の追加スタイル */
+    .tab-buttons {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .tab-buttons button {
+      margin: 0 10px;
+      padding: 10px 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    .meeting-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-bottom: 15px;
+    }
+    .meeting-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .meeting-card strong {
+      font-size: 1.2rem;
+    }
+    .meeting-card small {
+      color: #777;
+    }
+    .meeting-buttons {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="user-info">
+      <span id="loggedInUsername"></span>
+      <a href="#" onclick="logout()">ログアウト</a>
+    </div>
+    <h1>面談管理画面</h1>
+  </header>
+
+  <div class="tab-buttons">
+    <button onclick="showTab('list')">面談一覧</button>
+    <button onclick="showTab('create')">面談作成</button>
+    <button onclick="location.href='select.html'">戻る</button>
+  </div>
+
+  <!-- 面談一覧表示エリア -->
+  <div id="meetingsList"></div>
+
+  <!-- 面談作成フォーム -->
+  <div id="meetingForm" class="hidden">
+    <h2 style="text-align:center;">面談作成</h2>
+    <form id="createMeetingForm">
+      <div class="form-group">
+        <label for="interviewer">担当者（面談官）</label>
+        <select id="interviewer" required></select>
+      </div>
+      <div class="form-group">
+        <label for="interviewee">面談者</label>
+        <!-- 面談者入力欄：入力時に候補が表示される -->
+        <input type="text" id="interviewee" placeholder="面談者を入力" list="intervieweeList" required>
+        <datalist id="intervieweeList"></datalist>
+      </div>
+      <div class="form-group">
+        <label for="meetingDate">面談実施日・時刻</label>
+        <input type="datetime-local" id="meetingDate" required>
+      </div>
+      <div class="form-group">
+        <label for="location">実施場所（オフィス、オンライン等）</label>
+        <input type="text" id="location" placeholder="実施場所" required>
+      </div>
+      <!-- 「面談基本情報」ブロックは削除 -->
+
+      <details>
+        <summary>業務内容・目標</summary>
+        <div class="form-group">
+          <label for="jobDescription">業務内容</label>
+          <textarea id="jobDescription" placeholder="業務内容"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="goal">目標</label>
+          <textarea id="goal" placeholder="目標"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="goalStatus">目標の達成状況</label>
+          <textarea id="goalStatus" placeholder="達成状況"></textarea>
+        </div>
+      </details>
+      <details>
+        <summary>アクション・フィードバック</summary>
+        <div class="form-group">
+          <label for="actionsTaken">実行したこと</label>
+          <textarea id="actionsTaken" placeholder="実行したこと"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="successfulResults">成果</label>
+          <textarea id="successfulResults" placeholder="成果"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="challenges">課題や問題</label>
+          <textarea id="challenges" placeholder="課題や問題"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="feedback">フィードバック</label>
+          <textarea id="feedback" placeholder="フィードバック"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="nextAction">ネクストアクション</label>
+          <textarea id="nextAction" placeholder="次の行動"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="nextGoal">次の目標</label>
+          <textarea id="nextGoal" placeholder="次の目標"></textarea>
+        </div>
+      </details>
+      <button type="button" onclick="addMeeting()">面談作成</button>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    // ページ読み込み時、ログインユーザー表示
+    document.addEventListener("DOMContentLoaded", function(){
+      const usernameDisplay = document.getElementById("loggedInUsername");
+      if (usernameDisplay && user) {
+        usernameDisplay.textContent = user.username;
+      }
+    });
+
+    function showTab(tab) {
+      if (tab === 'list') {
+        document.getElementById("meetingsList").classList.remove("hidden");
+        document.getElementById("meetingForm").classList.add("hidden");
+        loadMeetings();
+      } else if (tab === 'create') {
+        document.getElementById("meetingsList").classList.add("hidden");
+        document.getElementById("meetingForm").classList.remove("hidden");
+      }
+    }
+  </script>
+</body>
+</html>

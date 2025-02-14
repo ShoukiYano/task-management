@@ -231,3 +231,78 @@ form .form-group {
   padding: 8px;
   border-bottom: 1px solid #ddd;
 }
+
+
+ /* ハンバーガーメニュー用スタイル */
+ input[type="checkbox"] {
+  display: none;
+}
+.actions-menu {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  right: 15px;
+  bottom: 15px;
+}
+.actions-menu .btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  opacity: 0;
+  transition: top 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              left 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              opacity 200ms;
+}
+.actions-menu .btn--menu {
+  position: absolute;
+  opacity: 1;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+.btn {
+  background: #e74c3c;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+.btn--menu:after, .btn--menu:before {
+  content: "";
+  display: block;
+  width: 25px;
+  height: 3px;
+  background: #fff;
+  position: absolute;
+  top: 29px;
+  left: 18px;
+  transition: transform 100ms;
+}
+.btn--menu:after {
+  transform: translateY(-5px);
+}
+.btn--menu:before {
+  transform: translateY(5px);
+}
+#actionMenuButton:checked + .actions-menu > .btn--menu:after {
+  transform: rotate(45deg);
+}
+#actionMenuButton:checked + .actions-menu > .btn--menu:before {
+  transform: rotate(-45deg);
+}
+#actionMenuButton:checked + .actions-menu > .btn--share {
+  top: -70px;
+}
+#actionMenuButton:checked + .actions-menu > .btn--star {
+  top: -50px;
+  left: -50px;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
