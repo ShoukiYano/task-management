@@ -909,7 +909,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-    // 面談用：その他のイベントなど
+  document.addEventListener("DOMContentLoaded", function () {
     const datalist = document.getElementById("intervieweeList");
     if (datalist) {
       const names = [
@@ -944,4 +944,6 @@ document.addEventListener("DOMContentLoaded", function () {
         datalist.appendChild(option);
       });
     }
+  });
+  
 });
