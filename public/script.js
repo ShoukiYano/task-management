@@ -622,38 +622,45 @@ function submitMeetingComment(meetingId) {
     return;
   }
 
-  // 更新データとして、コメント作成者とコメント内容を送信
-  const updateData = {
-    comment_user: user.username,  // users の username から紐づけ
-    comment: commentText
+  // 更新前の meeting 情報を取得（既存の meetingsData から取得する例）
+  const meeting = meetingsData.find(m => m.id === meetingId);
+  if (!meeting) {
+    alert("会議データが見つかりません。");
+    return;
+  }
+
+  // 全体データにコメント用のフィールドだけ上書きする
+  const updatedMeeting = {
+    ...meeting, // 既存の全フィールド
+    comment_user: user.username,  // 更新するコメント作成者
+    comment: commentText          // 更新するコメント内容
   };
 
   fetch(`${API_URL}/meetings/${meetingId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updateData)
+    body: JSON.stringify(updatedMeeting)
   })
     .then(res => {
       if (!res.ok) throw new Error("コメント送信エラー");
       return res.json();
     })
-    .then(updatedMeeting => {
+    .then(updatedData => {
       alert("コメントを保存しました。");
       // モーダル内のコメント表示を更新する
       const commentDisplay = document.getElementById("meetingCommentDisplay");
       if (commentDisplay) {
         commentDisplay.innerHTML = `
           <h3>コメント</h3>
-          <p><strong>コメント者:</strong> ${updatedMeeting.comment_user}</p>
-          <p><strong>コメント内容:</strong> ${updatedMeeting.comment}</p>
+          <p><strong>コメント者:</strong> ${updatedData.comment_user}</p>
+          <p><strong>コメント内容:</strong> ${updatedData.comment}</p>
         `;
       }
       document.getElementById("commentText").value = "";
-      // 必要に応じて meetingsData の該当データも更新する
+      // meetingsData を更新する
       const idx = meetingsData.findIndex(m => m.id === meetingId);
       if (idx !== -1) {
-        meetingsData[idx].comment_user = updatedMeeting.comment_user;
-        meetingsData[idx].comment = updatedMeeting.comment;
+        meetingsData[idx] = updatedData;
       }
     })
     .catch(err => {
@@ -661,6 +668,7 @@ function submitMeetingComment(meetingId) {
       alert("コメント送信中にエラーが発生しました。");
     });
 }
+
 
 
 
