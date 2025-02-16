@@ -286,3 +286,182 @@ img {
   margin-top: 20px;
   text-align: right;
 }
+
+
+/* =================================
+   モーダル全体のオーバーレイ
+================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; /* 他要素より前面に出す */
+}
+
+/* =================================
+   モーダルのコンテナ
+================================= */
+.modal-container {
+  width: 90%;
+  max-width: 600px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* フェードインアニメーション */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =================================
+   モーダルヘッダー
+================================= */
+.modal-header {
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  padding: 16px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* 閉じるボタン（右上の×） */
+.close-modal {
+  cursor: pointer;
+  font-size: 1.5rem;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.close-modal:hover {
+  opacity: 1;
+}
+
+/* =================================
+   モーダルボディ
+================================= */
+.modal-body {
+  padding: 20px;
+  flex: 1; /* フッター以外の空間を埋める */
+}
+
+/* フォームグループ */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #333;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #0072ff;
+  box-shadow: 0 0 0 2px rgba(0, 114, 255, 0.2);
+}
+
+/* 横並びにしたいフォームグループ */
+.form-group-inline {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.form-group-inline .form-group {
+  flex: 1;
+}
+
+/* =================================
+   モーダルフッター
+================================= */
+.modal-footer {
+  background-color: #f9f9f9;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ボタン共通 */
+.btn {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.btn:hover {
+  opacity: 0.9;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* プライマリーボタン */
+.btn-primary {
+  background-color: #0072ff;
+  color: #ffffff;
+}
+.btn-primary:hover {
+  background-color: #0056c9;
+}
+
+/* セカンダリーボタン */
+.btn-secondary {
+  background-color: #e0e0e0;
+  color: #333;
+}
+.btn-secondary:hover {
+  background-color: #ccc;
+}
+
+#saveTaskEditBtn {
+  background-color: #0072ff;
+  border: none;
+  border-radius: 8px;
+  width: 122px;
+  height: 45px;
+}
+
+#cancelTaskEditBtn {
+  background-color: #0072ff;
+  border: none;
+  border-radius: 8px;
+  width: 122px;
+  height: 45px;
+}

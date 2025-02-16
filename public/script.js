@@ -205,7 +205,8 @@ function updateApprovalStatus(taskId, status) {
       const btnDiv = document.getElementById(`task-buttons-${taskId}`);
       if (btnDiv) {
         if (status === "approved") {
-          btnDiv.innerHTML = `<button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
+          btnDiv.innerHTML = `<p style="color:green;">${task.assignee}からタスクを承認しました。</p>
+                              <button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
                               <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
         } else if (status === "rejected") {
           btnDiv.innerHTML = `<p style="color:red;">${task.assignee}からタスクを却下しました。</p>
@@ -314,71 +315,83 @@ function editTask(taskId) {
 }
 
 function showTaskEditModal(task) {
-  const modal = document.createElement("div");
-  modal.id = "taskEditModal";
-  modal.className = "modal";
+  // モーダルのオーバーレイ
+  const modalOverlay = document.createElement("div");
+  modalOverlay.id = "taskEditModal";
+  modalOverlay.className = "modal-overlay";
 
-  const modalContent = document.createElement("div");
-  modalContent.className = "modal-content";
-
-  const closeButton = document.createElement("span");
-  closeButton.className = "close-modal";
-  closeButton.innerHTML = "&times;";
-  closeButton.onclick = () => modal.remove();
-
-  modalContent.innerHTML = `
-    <h2>タスク編集</h2>
-    <div class="form-group">
-      <label for="edit_task_name">タスク名</label>
-      <input type="text" id="edit_task_name" value="${task.name}" required>
-    </div>
-    <div class="form-group">
-      <label for="edit_task_description">タスク内容</label>
-      <input type="text" id="edit_task_description" value="${task.description}" required>
-    </div>
-    <div class="form-group">
-      <label for="edit_task_deadline">期限</label>
-      <input type="date" id="edit_task_deadline" value="${task.deadline.split('T')[0]}" required>
-    </div>
-    <div class="form-group">
-      <label for="edit_task_status">ステータス</label>
-      <select id="edit_task_status" required>
-        <option value="未着手" ${task.status === "未着手" ? "selected" : ""}>未着手</option>
-        <option value="進行中" ${task.status === "進行中" ? "selected" : ""}>進行中</option>
-        <option value="完了" ${task.status === "完了" ? "selected" : ""}>完了</option>
-        <option value="保留" ${task.status === "保留" ? "selected" : ""}>保留</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="edit_task_priority">優先度</label>
-      <select id="edit_task_priority" required>
-        <option value="低" ${task.priority === "低" ? "selected" : ""}>低</option>
-        <option value="中" ${task.priority === "中" ? "selected" : ""}>中</option>
-        <option value="高" ${task.priority === "高" ? "selected" : ""}>高</option>
-        <option value="緊急" ${task.priority === "緊急" ? "selected" : ""}>緊急</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="edit_task_assignee">担当者</label>
-      <select id="edit_task_assignee"></select>
-    </div>
-    <div class="modal-actions">
-      <button type="button" id="saveTaskEditBtn">保存</button>
-      <button type="button" id="cancelTaskEditBtn">キャンセル</button>
+  // モーダルコンテンツ
+  modalOverlay.innerHTML = `
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>タスク編集</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="edit_task_name">タスク名</label>
+          <input type="text" id="edit_task_name" value="${task.name}" required>
+        </div>
+        <div class="form-group">
+          <label for="edit_task_description">タスク内容</label>
+          <textarea id="edit_task_description" rows="3" required>${task.description}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="edit_task_deadline">期限</label>
+          <input type="date" id="edit_task_deadline" value="${task.deadline.split('T')[0]}" required>
+        </div>
+        <div class="form-group-inline">
+          <div class="form-group">
+            <label for="edit_task_status">ステータス</label>
+            <select id="edit_task_status" required>
+              <option value="未着手" ${task.status === "未着手" ? "selected" : ""}>未着手</option>
+              <option value="進行中" ${task.status === "進行中" ? "selected" : ""}>進行中</option>
+              <option value="完了" ${task.status === "完了" ? "selected" : ""}>完了</option>
+              <option value="保留" ${task.status === "保留" ? "selected" : ""}>保留</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit_task_priority">優先度</label>
+            <select id="edit_task_priority" required>
+              <option value="低" ${task.priority === "低" ? "selected" : ""}>低</option>
+              <option value="中" ${task.priority === "中" ? "selected" : ""}>中</option>
+              <option value="高" ${task.priority === "高" ? "selected" : ""}>高</option>
+              <option value="緊急" ${task.priority === "緊急" ? "selected" : ""}>緊急</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit_task_assignee">担当者</label>
+          <select id="edit_task_assignee"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelTaskEditBtn" class="btn btn-secondary">キャンセル</button>
+        <button type="button" id="saveTaskEditBtn" class="btn btn-primary">保存</button>
+      </div>
     </div>
   `;
-  modalContent.prepend(closeButton);
-  modal.appendChild(modalContent);
-  document.body.appendChild(modal);
-  loadUsers();
 
+  // DOMに追加
+  document.body.appendChild(modalOverlay);
+
+  // 閉じるボタン
+  modalOverlay.querySelector(".close-modal").addEventListener("click", () => modalOverlay.remove());
+
+  // キャンセルボタン
+  document.getElementById("cancelTaskEditBtn").addEventListener("click", function () {
+    modalOverlay.remove();
+  });
+
+  // 保存ボタン
   document.getElementById("saveTaskEditBtn").addEventListener("click", function () {
     submitTaskEdit(task.id);
   });
-  document.getElementById("cancelTaskEditBtn").addEventListener("click", function () {
-    modal.remove();
-  });
+
+  // 担当者プルダウンにユーザー一覧をロード
+  loadUsers();
 }
+
 
 function submitTaskEdit(taskId) {
   const updatedTask = {
