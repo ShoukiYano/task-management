@@ -93,8 +93,6 @@ function loadUsers() {
     .catch(error => console.error("ユーザー取得エラー:", error));
 }
 
-
-
 /* ================================
    タスク管理
 ================================ */
@@ -128,8 +126,8 @@ function loadTasks() {
                   <p>優先度: ${task.priority} | ステータス: ${task.status}</p>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
                   <div class="task-buttons" id="task-buttons-${task.id}">
-                    <button onclick="approveTask('${task.id}')">承認</button>
-                    <button onclick="rejectTask('${task.id}')">却下</button>
+                    <button data-task-id="${task.id}" class="approve-btn">承認</button>
+                    <button data-task-id="${task.id}" class="reject-btn">却下</button>
                   </div>
                 </div>
               `;
@@ -171,8 +169,10 @@ function loadAdminTasks() {
 function approveTask(taskId) {
   const btnDiv = document.getElementById(`task-buttons-${taskId}`);
   if (btnDiv) {
-    btnDiv.innerHTML = `<button onclick="editTask('${taskId}')">✏️ 編集</button>
-                        <button onclick="deleteTask('${taskId}')">🗑️ 削除</button>`;
+    btnDiv.innerHTML = `<button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
+                        <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
+    // イベントリスナーを後から設定（以下のコードで bind）
+    bindTaskButtons();
   }
 }
 
@@ -181,9 +181,34 @@ function rejectTask(taskId) {
   const btnDiv = document.getElementById(`task-buttons-${taskId}`);
   if (btnDiv && task) {
     btnDiv.innerHTML = `<p class="reject-msg">${task.assignee}から却下されました</p>
-                        <button onclick="editTask('${taskId}')">✏️ 編集</button>
-                        <button onclick="deleteTask('${taskId}')">🗑️ 削除</button>`;
+                        <button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
+                        <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
+    bindTaskButtons();
   }
+}
+
+// タスクボタン（編集、削除）のイベントリスナーを設定
+function bindTaskButtons() {
+  const editButtons = document.querySelectorAll(".edit-btn");
+  editButtons.forEach(btn => {
+    btn.removeEventListener("click", editTaskHandler);
+    btn.addEventListener("click", editTaskHandler);
+  });
+  const deleteButtons = document.querySelectorAll(".delete-btn");
+  deleteButtons.forEach(btn => {
+    btn.removeEventListener("click", deleteTaskHandler);
+    btn.addEventListener("click", deleteTaskHandler);
+  });
+}
+
+function editTaskHandler(e) {
+  const taskId = e.target.getAttribute("data-task-id");
+  editTask(taskId);
+}
+
+function deleteTaskHandler(e) {
+  const taskId = e.target.getAttribute("data-task-id");
+  deleteTask(taskId);
 }
 
 function showDeadlineWarningModal(tasksWithWarning) {
@@ -304,14 +329,21 @@ function showTaskEditModal(task) {
       <select id="edit_task_assignee" required></select>
     </div>
     <div class="modal-actions">
-      <button type="button" onclick="submitTaskEdit('${task.id}')">保存</button>
-      <button type="button" onclick="document.getElementById('taskEditModal').remove()">キャンセル</button>
+      <button type="button" id="saveTaskEditBtn">保存</button>
+      <button type="button" id="cancelTaskEditBtn">キャンセル</button>
     </div>
   `;
   modalContent.prepend(closeButton);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
-  loadUsers(); // 担当者プルダウンを更新
+  loadUsers(); // 担当者プルダウン更新
+
+  document.getElementById("saveTaskEditBtn").addEventListener("click", function () {
+    submitTaskEdit(task.id);
+  });
+  document.getElementById("cancelTaskEditBtn").addEventListener("click", function () {
+    modal.remove();
+  });
 }
 
 function submitTaskEdit(taskId) {
@@ -368,7 +400,7 @@ function loadMeetings() {
       if (meetingsList) {
         meetingsList.innerHTML = meetings.length
           ? meetings.map(meeting => `
-              <div class="meeting-card" onclick="openMeetingModal('${meeting.id}')">
+              <div class="meeting-card" data-meeting-id="${meeting.id}">
                 <h3>面談日: ${new Date(meeting.meeting_date).toLocaleString("ja-JP")}</h3>
                 <p>場所: ${meeting.location || ''}</p>
                 <p>${meeting.job_description ? truncateText(meeting.job_description, 50) : ''}</p>
@@ -376,6 +408,12 @@ function loadMeetings() {
               </div>
             `).join('')
           : "<p>面談はありません。</p>";
+        // 各面談カードにクリックイベントを設定
+        document.querySelectorAll(".meeting-card").forEach(card => {
+          card.addEventListener("click", function () {
+            openMeetingModal(card.getAttribute("data-meeting-id"));
+          });
+        });
       }
     })
     .catch(err => console.error("面談取得エラー:", err));
@@ -394,7 +432,7 @@ function openMeetingModal(meetingId) {
   const closeButton = document.createElement("span");
   closeButton.className = "close-modal";
   closeButton.innerHTML = "&times;";
-  closeButton.onclick = closeMeetingModal;
+  closeButton.addEventListener("click", closeMeetingModal);
 
   const detailDiv = document.createElement("div");
   detailDiv.innerHTML = `
@@ -416,8 +454,8 @@ function openMeetingModal(meetingId) {
   const btnDiv = document.createElement("div");
   btnDiv.className = "modal-actions";
   btnDiv.innerHTML = `
-    <button onclick="showCommentForm('${meeting.id}')">コメント</button>
-    <button onclick="showMeetingEditForm('${meeting.id}')">編集</button>
+    <button id="commentBtn">コメント</button>
+    <button id="editMeetingBtn">編集</button>
   `;
 
   const commentContainer = document.createElement("div");
@@ -429,6 +467,13 @@ function openMeetingModal(meetingId) {
   modalContent.append(closeButton, detailDiv, btnDiv, commentContainer, editContainer);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
+
+  document.getElementById("commentBtn").addEventListener("click", function () {
+    showCommentForm(meeting.id);
+  });
+  document.getElementById("editMeetingBtn").addEventListener("click", function () {
+    showMeetingEditForm(meeting.id);
+  });
 }
 
 function closeMeetingModal() {
@@ -442,8 +487,11 @@ function showCommentForm(meetingId) {
     <h3>コメントを追加</h3>
     <p><strong>担当者:</strong> ${user.username}</p>
     <textarea id="commentText" rows="4" placeholder="コメントを入力"></textarea>
-    <button onclick="submitMeetingComment('${meetingId}')">送信</button>
+    <button id="submitCommentBtn">送信</button>
   `;
+  document.getElementById("submitCommentBtn").addEventListener("click", function () {
+    submitMeetingComment(meetingId);
+  });
 }
 
 function submitMeetingComment(meetingId) {
@@ -524,10 +572,16 @@ function showMeetingEditForm(meetingId) {
       <input type="text" id="edit_next_goal" value="${meeting.next_goal || ''}">
     </div>
     <div class="modal-actions">
-      <button onclick="submitMeetingEdit('${meeting.id}')">保存</button>
-      <button onclick="document.getElementById('editFormContainer').innerHTML = '';">キャンセル</button>
+      <button id="saveMeetingEditBtn">保存</button>
+      <button id="cancelMeetingEditBtn">キャンセル</button>
     </div>
   `;
+  document.getElementById("saveMeetingEditBtn").addEventListener("click", function () {
+    submitMeetingEdit(meeting.id);
+  });
+  document.getElementById("cancelMeetingEditBtn").addEventListener("click", function () {
+    editContainer.innerHTML = "";
+  });
 }
 
 function submitMeetingEdit(meetingId) {
@@ -577,11 +631,11 @@ function truncateText(text, n) {
 }
 
 /* ================================
-   既存のハンバーガーメニューおよびロード画面
+   既存のハンバーガーメニューおよびロード画面処理
 ================================ */
-// ハンバーガーメニューは、HTML 側でチェックボックスとラベルにより制御（CSS によるアニメーション）しているため、追加の JS は不要です。
+// ハンバーガーメニューの展開は HTML/CSS 側でチェックボックス（id="actionMenuButton"）とラベルにより制御
+// ここでは、ロード画面の処理を既存コードに準じて記述
 
-// タスク画面から面談画面へ遷移する際のロード画面（既存コード）
 function goToMeetings() {
   let loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
@@ -592,7 +646,6 @@ function goToMeetings() {
   }
 }
 
-// 面談画面からタスク画面へ遷移する際のロード画面（既存コード）
 function goToTasks() {
   let loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
@@ -603,7 +656,11 @@ function goToTasks() {
   }
 }
 
+/* ================================
+   DOMContentLoaded 初期化処理
+================================ */
 document.addEventListener("DOMContentLoaded", function () {
+  // ユーザー名表示（各ヘッダー用）
   if (user && document.getElementById("loggedInUsername")) {
     document.getElementById("loggedInUsername").textContent = user.username;
   }
@@ -654,6 +711,24 @@ document.addEventListener("DOMContentLoaded", function () {
       const option = document.createElement("option");
       option.value = name;
       datalist.appendChild(option);
+    });
+  }
+  
+  // loginForm の submit イベント（ログイン処理）
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      login();
+    });
+  }
+  
+  // ログアウトリンクのイベント設定（id="logoutLink" を HTML に用意する）
+  const logoutLink = document.getElementById("logoutLink");
+  if (logoutLink) {
+    logoutLink.addEventListener("click", function(e) {
+      e.preventDefault();
+      logout();
     });
   }
 });
