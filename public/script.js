@@ -622,18 +622,18 @@ function submitMeetingComment(meetingId) {
     return;
   }
 
-  // 更新前の meeting 情報を取得（既存の meetingsData から取得する例）
+  // meetingsData から現在の会議情報を取得
   const meeting = meetingsData.find(m => m.id === meetingId);
   if (!meeting) {
     alert("会議データが見つかりません。");
     return;
   }
 
-  // 全体データにコメント用のフィールドだけ上書きする
+  // 既存の meeting データにコメントフィールドだけ上書きする
   const updatedMeeting = {
-    ...meeting, // 既存の全フィールド
-    comment_user: user.username,  // 更新するコメント作成者
-    comment: commentText          // 更新するコメント内容
+    ...meeting,
+    comment_user: user.username,  // ユーザー名（users.username）
+    comment: commentText
   };
 
   fetch(`${API_URL}/meetings/${meetingId}`, {
@@ -647,17 +647,17 @@ function submitMeetingComment(meetingId) {
     })
     .then(updatedData => {
       alert("コメントを保存しました。");
-      // モーダル内のコメント表示を更新する
+      // モーダル内のコメント表示を更新
       const commentDisplay = document.getElementById("meetingCommentDisplay");
       if (commentDisplay) {
         commentDisplay.innerHTML = `
           <h3>コメント</h3>
-          <p><strong>コメント者:</strong> ${updatedData.comment_user}</p>
-          <p><strong>コメント内容:</strong> ${updatedData.comment}</p>
+          <p><strong>コメント者:</strong> ${updatedData.comment_user || "-"}</p>
+          <p><strong>コメント内容:</strong> ${updatedData.comment || "コメントはありません。"}</p>
         `;
       }
       document.getElementById("commentText").value = "";
-      // meetingsData を更新する
+      // meetingsData 内の更新も反映
       const idx = meetingsData.findIndex(m => m.id === meetingId);
       if (idx !== -1) {
         meetingsData[idx] = updatedData;
@@ -668,6 +668,7 @@ function submitMeetingComment(meetingId) {
       alert("コメント送信中にエラーが発生しました。");
     });
 }
+
 
 
 
