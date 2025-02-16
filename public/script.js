@@ -546,6 +546,7 @@ function openMeetingModal(meetingId) {
   closeButton.innerHTML = "&times;";
   closeButton.addEventListener("click", closeMeetingModal);
 
+  // 既存の面談詳細
   const detailDiv = document.createElement("div");
   detailDiv.innerHTML = `
     <h2>面談詳細</h2>
@@ -563,6 +564,16 @@ function openMeetingModal(meetingId) {
     <p><strong>次の目標:</strong> ${meeting.next_goal || ""}</p>
   `;
 
+  // コメント表示セクション（meetings テーブルに保存された内容）
+  const commentDisplay = document.createElement("div");
+  commentDisplay.id = "meetingCommentDisplay";
+  commentDisplay.innerHTML = `
+    <h3>コメント</h3>
+    <p><strong>コメント者:</strong> ${meeting.comment_user ? meeting.comment_user : "-"}</p>
+    <p><strong>コメント内容:</strong> ${meeting.comment ? meeting.comment : "コメントはありません。"}</p>
+  `;
+
+  // モーダル内のアクションボタン（コメント・編集）
   const btnDiv = document.createElement("div");
   btnDiv.className = "modal-actions";
   btnDiv.innerHTML = `
@@ -570,21 +581,23 @@ function openMeetingModal(meetingId) {
     <button id="editMeetingBtn">編集</button>
   `;
 
+  // コメントフォームと編集フォームのコンテナ
   const commentContainer = document.createElement("div");
   commentContainer.id = "commentFormContainer";
-
   const editContainer = document.createElement("div");
   editContainer.id = "editFormContainer";
 
-  modalContent.append(closeButton, detailDiv, btnDiv, commentContainer, editContainer);
+  // モーダルの組み立て
+  modalContent.append(closeButton, detailDiv, commentDisplay, btnDiv, commentContainer, editContainer);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
 
-  // コメント
+  // コメントフォーム表示イベント
   document.getElementById("commentBtn").addEventListener("click", () => showCommentForm(meeting.id));
-  // 編集
+  // 編集フォーム表示イベント
   document.getElementById("editMeetingBtn").addEventListener("click", () => showMeetingEditForm(meeting.id));
 }
+
 
 function closeMeetingModal() {
   const modal = document.getElementById("meetingModal");
@@ -595,7 +608,7 @@ function showCommentForm(meetingId) {
   const container = document.getElementById("commentFormContainer");
   container.innerHTML = `
     <h3>コメントを追加</h3>
-    <p><strong>担当者:</strong> ${user.username}</p>
+    <p><strong>コメント者:</strong> ${user.username}</p>
     <textarea id="commentText" rows="4" placeholder="コメントを入力"></textarea>
     <button id="submitCommentBtn">送信</button>
   `;
@@ -609,31 +622,46 @@ function submitMeetingComment(meetingId) {
     return;
   }
 
-  // API に送信するデータ
-  const commentData = {
-    commenter: user.username,  // コメント作成者の名前
-    comment: commentText       // コメント内容
+  // 更新データとして、コメント作成者とコメント内容を送信
+  const updateData = {
+    comment_user: user.username,  // users の username から紐づけ
+    comment: commentText
   };
 
-  fetch(`${API_URL}/meetings/${meetingId}/comments`, {
-    method: "POST",
+  fetch(`${API_URL}/meetings/${meetingId}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(commentData)
+    body: JSON.stringify(updateData)
   })
     .then(res => {
       if (!res.ok) throw new Error("コメント送信エラー");
       return res.json();
     })
-    .then(() => {
+    .then(updatedMeeting => {
       alert("コメントを保存しました。");
+      // モーダル内のコメント表示を更新する
+      const commentDisplay = document.getElementById("meetingCommentDisplay");
+      if (commentDisplay) {
+        commentDisplay.innerHTML = `
+          <h3>コメント</h3>
+          <p><strong>コメント者:</strong> ${updatedMeeting.comment_user}</p>
+          <p><strong>コメント内容:</strong> ${updatedMeeting.comment}</p>
+        `;
+      }
       document.getElementById("commentText").value = "";
-      // 必要に応じてコメント一覧を再取得するなどの処理を追加
+      // 必要に応じて meetingsData の該当データも更新する
+      const idx = meetingsData.findIndex(m => m.id === meetingId);
+      if (idx !== -1) {
+        meetingsData[idx].comment_user = updatedMeeting.comment_user;
+        meetingsData[idx].comment = updatedMeeting.comment;
+      }
     })
     .catch(err => {
       console.error(err);
       alert("コメント送信中にエラーが発生しました。");
     });
 }
+
 
 
 function showMeetingEditForm(meetingId) {
