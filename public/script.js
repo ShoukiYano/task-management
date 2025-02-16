@@ -93,10 +93,7 @@ function loadUsers() {
     .catch(error => console.error("ユーザー取得エラー:", error));
 }
 
-function logout() {
-  localStorage.removeItem("loggedInUser");
-  window.location.href = "login.html";
-}
+
 
 /* ================================
    タスク管理
