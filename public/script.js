@@ -30,6 +30,7 @@ function login() {
     .catch(error => console.error("ログインエラー:", error));
 }
 
+// 既存の register 関数（ユーザー登録処理）
 function register() {
   const email = document.getElementById("regEmail").value.trim();
   const username = document.getElementById("regUsername").value.trim();
@@ -48,6 +49,18 @@ function register() {
     })
     .catch(error => console.error("登録エラー:", error));
 }
+
+// DOMContentLoaded 時に registerForm の submit イベントを設定
+document.addEventListener("DOMContentLoaded", function () {
+  const registerForm = document.getElementById("registerForm");
+  if (registerForm) {
+    registerForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      register();
+    });
+  }
+});
+
 
 function loadUsers() {
   fetch(`${API_URL}/users`)

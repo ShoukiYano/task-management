@@ -5,20 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>新規登録 - Task & Meeting Manager</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Google Fonts -->
+  <!-- Google Fonts（任意） -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <main class="auth-container">
     <div class="card">
       <h2>新規登録</h2>
+      <!-- インラインイベントハンドラを削除し、フォームに id を付与 -->
       <form id="registerForm">
         <input type="email" id="regEmail" placeholder="メールアドレス" required>
         <input type="text" id="regUsername" placeholder="ユーザー名" required>
         <input type="password" id="regPassword" placeholder="パスワード" required>
-        <button type="button" onclick="register()">登録する</button>
+        <button type="submit">登録する</button>
       </form>
-      <p>すでにアカウントをお持ちですか？ <a href="login.html">ログインはこちら</a></p>
+      <p>すでにアカウントをお持ちですか？ <a href="login.html" id="toLogin">ログイン</a></p>
     </div>
   </main>
   <script src="script.js"></script>
