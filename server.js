@@ -1,3 +1,6 @@
+// server.js
+require('dotenv').config(); // .env の設定を読み込み
+
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
@@ -17,7 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // PostgreSQL 接続プールの設定
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:XmuQMfyOkrrugmLpWFweqzidUqlozhsq@viaduct.proxy.rlwy.net:18155/railway?sslmode=require",
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
@@ -292,7 +295,7 @@ const server = app.listen(PORT, () => {
   console.log(`✅ Server is running on http://localhost:${PORT}`);
 });
 
-// ======= SIGTERM を受信した際の graceful shutdown 処理 =======
+// ======= SIGTERM を受信した際の graceful shutdown =======
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   server.close(() => {
