@@ -178,6 +178,14 @@ app.delete('/tasks/:id', async (req, res) => {
   }
 });
 
+const now = new Date().toISOString();
+const id = uuidv4();
+const result = await pool.query(
+  "INSERT INTO tasks (id, name, description, status, priority, assignee, creator, deadline, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
+  [id, name, description, status, priority, assignee, creator, deadline, now, now]
+);
+
+
 /* ================================
    面談管理 API
 ================================ */
