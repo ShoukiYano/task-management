@@ -113,11 +113,12 @@
       </div>
     </header>
     <main class="container">
+      <!-- タブ部分 -->
       <div class="tabs">
-        <button class="tab-btn" onclick="showTab('list')">面談一覧</button>
-        <button class="tab-btn" onclick="showTab('create')">面談作成</button>
+        <button type="button" id="showMeetingListBtn">面談一覧</button>
+        <button type="button" id="showMeetingCreateBtn">面談作成</button>
       </div>
-      <!-- 面談一覧表示エリア -->
+      <!-- 面談一覧エリア -->
       <section id="meetingsList" class="meeting-section"></section>
       <!-- 面談作成フォーム -->
       <section id="meetingForm" class="meeting-section hidden">
@@ -129,27 +130,17 @@
           </div>
           <div class="form-group">
             <label for="interviewee">面談者</label>
-            <input
-              type="text"
-              id="interviewee"
-              placeholder="面談者を入力"
-              list="intervieweeList"
-              required
-            />
+            <!-- 入力補完用 -->
+            <input type="text" id="interviewee" placeholder="面談者を入力" list="intervieweeList" required>
             <datalist id="intervieweeList"></datalist>
           </div>
           <div class="form-group">
             <label for="meetingDate">面談日・時刻</label>
-            <input type="datetime-local" id="meetingDate" required />
+            <input type="datetime-local" id="meetingDate" required>
           </div>
           <div class="form-group">
             <label for="location">実施場所</label>
-            <input
-              type="text"
-              id="location"
-              placeholder="オフィス、オンライン等"
-              required
-            />
+            <input type="text" id="location" placeholder="オフィス、オンライン等" required>
           </div>
           <details>
             <summary>業務内容・目標</summary>
@@ -193,7 +184,7 @@
               <textarea id="nextGoal" placeholder="次の目標"></textarea>
             </div>
           </details>
-          <button type="button" onclick="addMeeting()">面談作成</button>
+          <button type="submit">面談作成</button>
         </form>
       </section>
       <!-- アクションメニュー -->
