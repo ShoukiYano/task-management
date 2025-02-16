@@ -608,17 +608,33 @@ function submitMeetingComment(meetingId) {
     alert("コメントを入力してください。");
     return;
   }
-  let meetingComments = JSON.parse(localStorage.getItem("meetingComments")) || {};
-  if (!meetingComments[meetingId]) meetingComments[meetingId] = [];
-  meetingComments[meetingId].push({
-    user: user.username,
-    text: commentText,
-    timestamp: new Date().toISOString()
-  });
-  localStorage.setItem("meetingComments", JSON.stringify(meetingComments));
-  alert("コメントを保存しました。");
-  document.getElementById("commentText").value = "";
+
+  // API に送信するデータ
+  const commentData = {
+    commenter: user.username,  // コメント作成者の名前
+    comment: commentText       // コメント内容
+  };
+
+  fetch(`${API_URL}/meetings/${meetingId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(commentData)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("コメント送信エラー");
+      return res.json();
+    })
+    .then(() => {
+      alert("コメントを保存しました。");
+      document.getElementById("commentText").value = "";
+      // 必要に応じてコメント一覧を再取得するなどの処理を追加
+    })
+    .catch(err => {
+      console.error(err);
+      alert("コメント送信中にエラーが発生しました。");
+    });
 }
+
 
 function showMeetingEditForm(meetingId) {
   const editContainer = document.getElementById("editFormContainer");
