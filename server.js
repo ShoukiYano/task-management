@@ -4,21 +4,22 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const { Pool } = require('pg');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors());
+app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// PostgreSQL 用プール作成（環境変数 DATABASE_URL がなければ接続文字列を指定）
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || "postgresql://postgres:XmuQMfyOkrrugmLpWFweqzidUqlozhsq@viaduct.proxy.rlwy.net:18155/railway?sslmode=require",
   ssl: { rejectUnauthorized: false }
 });
 
-// サーバー起動時に admin ユーザーが存在しなければ作成する
+// サーバー起動時に admin ユーザーが存在しなければ作成
 (async () => {
   try {
     const result = await pool.query("SELECT * FROM users WHERE username = 'admin'");
@@ -38,7 +39,6 @@ const pool = new Pool({
 /* ================================
    ユーザー管理 API
 ================================ */
-
 // ログイン API
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -60,7 +60,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 新規ユーザー登録 API
+// 新規登録 API
 app.post('/register', async (req, res) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
@@ -83,7 +83,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// ユーザー一覧取得 API（担当者プルダウン用）
+// ユーザー一覧取得 API
 app.get('/users', async (req, res) => {
   try {
     const result = await pool.query("SELECT username, email FROM users");
@@ -97,8 +97,7 @@ app.get('/users', async (req, res) => {
 /* ================================
    タスク管理 API
 ================================ */
-
-// タスク取得 API（作成者・担当者・管理者のみ表示）
+// タスク取得 API
 app.get('/tasks/:username', async (req, res) => {
   const username = decodeURIComponent(req.params.username);
   console.log(`🔹 タスクを取得 - ユーザー名: ${username}`);
@@ -147,14 +146,15 @@ app.put('/tasks/:id', async (req, res) => {
     const fields = [];
     const values = [];
     let idx = 1;
-    if (name) { fields.push(`name = $${idx++}`); values.push(name); }
-    if (description) { fields.push(`description = $${idx++}`); values.push(description); }
-    if (status) { fields.push(`status = $${idx++}`); values.push(status); }
-    if (priority) { fields.push(`priority = $${idx++}`); values.push(priority); }
-    if (assignee) { fields.push(`assignee = $${idx++}`); values.push(assignee); }
-    if (deadline) { fields.push(`deadline = $${idx++}`); values.push(deadline); }
-    fields.push(`updated_at = $${idx++}`);
+    if (name) { fields.push(`name = $${idx}`); values.push(name); idx++; }
+    if (description) { fields.push(`description = $${idx}`); values.push(description); idx++; }
+    if (status) { fields.push(`status = $${idx}`); values.push(status); idx++; }
+    if (priority) { fields.push(`priority = $${idx}`); values.push(priority); idx++; }
+    if (assignee) { fields.push(`assignee = $${idx}`); values.push(assignee); idx++; }
+    if (deadline) { fields.push(`deadline = $${idx}`); values.push(deadline); idx++; }
+    fields.push(`updated_at = $${idx}`);
     values.push(new Date().toISOString());
+    idx++;
     values.push(taskId);
     const query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
     const result = await pool.query(query, values);
@@ -184,9 +184,8 @@ app.delete('/tasks/:id', async (req, res) => {
 });
 
 /* ================================
-   面談管理機能（Meeting Management）
+   面談管理 API
 ================================ */
-
 // 面談追加 API
 app.post('/meetings', async (req, res) => {
   const {
@@ -201,7 +200,7 @@ app.post('/meetings', async (req, res) => {
     return res.status(400).json({ message: "必要なフィールドが不足しています" });
   }
   
-  const now = new Date();
+  const now = new Date().toISOString();
   const id = uuidv4();
   try {
     const result = await pool.query(
@@ -242,31 +241,33 @@ app.get('/meetings/:username', async (req, res) => {
 // 面談更新 API
 app.put('/meetings/:id', async (req, res) => {
   const meetingId = req.params.id;
-  const fields = [
+  const allowedFields = [
     'meeting_date', 'location', 'interviewer', 'interviewee',
     'interviewee_name', 'interviewee_affiliation', 'interviewee_position',
     'job_description', 'goal', 'goal_status', 'actions_taken',
     'successful_results', 'challenges', 'feedback', 'next_action', 'next_goal'
   ];
   
-  let idx = 1;
   const setParts = [];
   const params = [];
-  for (const field of fields) {
+  let idx = 1;
+  allowedFields.forEach(field => {
     if (req.body[field] !== undefined) {
       setParts.push(`${field} = $${idx}`);
       params.push(req.body[field]);
       idx++;
     }
-  }
+  });
+  
   if (setParts.length === 0) {
     return res.status(400).json({ message: "更新するフィールドがありません" });
   }
+  
   setParts.push(`updated_at = $${idx}`);
   params.push(new Date().toISOString());
+  idx++;
   params.push(meetingId);
-  
-  const query = `UPDATE meetings SET ${setParts.join(', ')} WHERE id = $${idx+1} RETURNING *`;
+  const query = `UPDATE meetings SET ${setParts.join(', ')} WHERE id = $${idx} RETURNING *`;
   
   try {
     const result = await pool.query(query, params);

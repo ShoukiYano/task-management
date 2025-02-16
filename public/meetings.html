@@ -1,156 +1,271 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>面談管理</title>
-  <link rel="stylesheet" href="style.css">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>面談管理 - Task & Meeting Manager</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
   <style>
-    /* 面談管理画面用の追加スタイル */
-    .tab-buttons {
-      text-align: center;
-      margin-bottom: 20px;
+    .btn {
+      background: #e74c3c;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
     }
-    .tab-buttons button {
-      margin: 0 10px;
-      padding: 10px 20px;
+    .btn svg {
+      position: relative;
+      top: 1px;
+      right: 1px;
     }
-    .hidden {
-      display: none;
+    .btn--large {
+      width: 60px;
+      height: 60px;
     }
-    .meeting-card {
+    .btn--menu:after,
+    .btn--menu:before {
+      content: "";
+      display: block;
+      width: 25px;
+      height: 3px;
       background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      margin-bottom: 15px;
+      position: absolute;
+      top: 29px;
+      left: 18px;
+      transition: transform 100ms;
     }
-    .meeting-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    .btn--menu:after {
+      transform: translateY(-5px);
     }
-    .meeting-card strong {
-      font-size: 1.2rem;
+    .btn--menu:before {
+      transform: translateY(5px);
     }
-    .meeting-card small {
-      color: #777;
+    .btn--share {
+      background: #f39c12;
     }
-    .meeting-buttons {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
+    .btn--star {
+      background: #2ecc71;
+      cursor: not-allowed;
+    }
+    .btn--comment {
+      background: #16a085;
+    }
+    /* ----- アクションメニュー（常に右下に固定） ----- */
+    .actions-menu {
+      position: fixed;
+      width: 60px;
+      height: 60px;
+      right: 15px;
+      bottom: 15px;
+      z-index: 11000;
+    }
+    .actions-menu .btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      opacity: 0;
+      transition: top 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        left 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 200ms;
+    }
+    .actions-menu .btn--menu {
+      position: absolute;
+      opacity: 1;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+    .btn--menu,
+    #actionMenuButton:checked + .actions-menu > .btn {
+      opacity: 1;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    }
+    #actionMenuButton:checked + .actions-menu > .btn--menu:after {
+      transform: rotate(45deg);
+    }
+    #actionMenuButton:checked + .actions-menu > .btn--menu:before {
+      transform: rotate(-45deg);
+    }
+    #actionMenuButton:checked + .actions-menu > .btn--share {
+      top: -70px;
+    }
+    #actionMenuButton:checked + .actions-menu > .btn--star {
+      top: -50px;
+      left: -50px;
+    }
+    #actionMenuButton:checked + .actions-menu > .btn--comment {
+      left: -70px;
     }
   </style>
-</head>
-<body>
-  <header>
-    <div class="user-info">
-      <span id="loggedInUsername"></span>
-      <a href="#" onclick="logout()">ログアウト</a>
+  <body>
+    <header class="main-header">
+      <div class="container header-flex">
+        <div class="header-user">
+          <span id="loggedInUsername"></span>
+          <a href="#" onclick="logout()">ログアウト</a>
+        </div>
+        <h1>面談管理</h1>
+      </div>
+    </header>
+    <main class="container">
+      <div class="tabs">
+        <button class="tab-btn" onclick="showTab('list')">面談一覧</button>
+        <button class="tab-btn" onclick="showTab('create')">面談作成</button>
+      </div>
+      <!-- 面談一覧表示エリア -->
+      <section id="meetingsList" class="meeting-section"></section>
+      <!-- 面談作成フォーム -->
+      <section id="meetingForm" class="meeting-section hidden">
+        <h2>面談作成</h2>
+        <form id="createMeetingForm">
+          <div class="form-group">
+            <label for="interviewer">担当者（面談官）</label>
+            <select id="interviewer" required></select>
+          </div>
+          <div class="form-group">
+            <label for="interviewee">面談者</label>
+            <input
+              type="text"
+              id="interviewee"
+              placeholder="面談者を入力"
+              list="intervieweeList"
+              required
+            />
+            <datalist id="intervieweeList"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="meetingDate">面談日・時刻</label>
+            <input type="datetime-local" id="meetingDate" required />
+          </div>
+          <div class="form-group">
+            <label for="location">実施場所</label>
+            <input
+              type="text"
+              id="location"
+              placeholder="オフィス、オンライン等"
+              required
+            />
+          </div>
+          <details>
+            <summary>業務内容・目標</summary>
+            <div class="form-group">
+              <label for="jobDescription">業務内容</label>
+              <textarea id="jobDescription" placeholder="業務内容"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="goal">目標</label>
+              <textarea id="goal" placeholder="目標"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="goalStatus">達成状況</label>
+              <textarea id="goalStatus" placeholder="達成状況"></textarea>
+            </div>
+          </details>
+          <details>
+            <summary>アクション・フィードバック</summary>
+            <div class="form-group">
+              <label for="actionsTaken">実行したこと</label>
+              <textarea id="actionsTaken" placeholder="実行したこと"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="successfulResults">成果</label>
+              <textarea id="successfulResults" placeholder="成果"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="challenges">課題</label>
+              <textarea id="challenges" placeholder="課題"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="feedback">フィードバック</label>
+              <textarea id="feedback" placeholder="フィードバック"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="nextAction">ネクストアクション</label>
+              <textarea id="nextAction" placeholder="次の行動"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="nextGoal">次の目標</label>
+              <textarea id="nextGoal" placeholder="次の目標"></textarea>
+            </div>
+          </details>
+          <button type="button" onclick="addMeeting()">面談作成</button>
+        </form>
+      </section>
+      <!-- アクションメニュー -->
+          <!-- アクションメニュー（常に右下に固定） -->
+    <input type="checkbox" id="actionMenuButton" hidden/>
+    <div class="actions-menu">
+      <button class="btn btn--share" onclick="goToTasks()">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path
+            fill="#ffffff"
+            d="M19 3H14.82C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 3.5c.55 0 1 .45 1 1h4c0-.55.45-1 1-1s1 .45 1 1v2H9v-2c0-.55.45-1 1-1zm10 15H5V5h14v13z"
+          />
+          <path fill="#ffffff" d="M9 12l2 2 4-4" />
+        </svg>
+      </button>
+      <button class="btn btn--star" disabled>
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path
+            fill="#ffffff"
+            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h7v-2c0-.66.16-1.3.44-1.86C8.17 13.66 8 13.34 8 13c0-1.66 1.34-3 3-3s3 1.34 3 3c0 .34-.17.66-.44 1.14.28.56.44 1.2.44 1.86v2h7v-2.5c0-2.33-4.67-3.5-7-3.5-1.93 0-3.68.5-5 1.36C11.68 13.5 10.34 13 9 13z"
+          />
+        </svg>
+      </button>
+      <label for="actionMenuButton" class="btn btn--large btn--menu"></label>
     </div>
-    <h1>面談管理画面</h1>
-  </header>
-
-  <div class="tab-buttons">
-    <button onclick="showTab('list')">面談一覧</button>
-    <button onclick="showTab('create')">面談作成</button>
-    <button onclick="location.href='select.html'">戻る</button>
-  </div>
-
-  <!-- 面談一覧表示エリア -->
-  <div id="meetingsList"></div>
-
-  <!-- 面談作成フォーム -->
-  <div id="meetingForm" class="hidden">
-    <h2 style="text-align:center;">面談作成</h2>
-    <form id="createMeetingForm">
-      <div class="form-group">
-        <label for="interviewer">担当者（面談官）</label>
-        <select id="interviewer" required></select>
+      <!-- ロード画面 -->
+      <div id="loadingScreen" class="loading-screen hidden">
+        <div class="loading-spinner"></div>
+        <img src="./修正DRIVELINE.png" alt="Logo" />
+        <div class="loading-text">LOADING...</div>
       </div>
-      <div class="form-group">
-        <label for="interviewee">面談者</label>
-        <!-- 面談者入力欄：入力時に候補が表示される -->
-        <input type="text" id="interviewee" placeholder="面談者を入力" list="intervieweeList" required>
-        <datalist id="intervieweeList"></datalist>
-      </div>
-      <div class="form-group">
-        <label for="meetingDate">面談実施日・時刻</label>
-        <input type="datetime-local" id="meetingDate" required>
-      </div>
-      <div class="form-group">
-        <label for="location">実施場所（オフィス、オンライン等）</label>
-        <input type="text" id="location" placeholder="実施場所" required>
-      </div>
-      <!-- 「面談基本情報」ブロックは削除 -->
-
-      <details>
-        <summary>業務内容・目標</summary>
-        <div class="form-group">
-          <label for="jobDescription">業務内容</label>
-          <textarea id="jobDescription" placeholder="業務内容"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="goal">目標</label>
-          <textarea id="goal" placeholder="目標"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="goalStatus">目標の達成状況</label>
-          <textarea id="goalStatus" placeholder="達成状況"></textarea>
-        </div>
-      </details>
-      <details>
-        <summary>アクション・フィードバック</summary>
-        <div class="form-group">
-          <label for="actionsTaken">実行したこと</label>
-          <textarea id="actionsTaken" placeholder="実行したこと"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="successfulResults">成果</label>
-          <textarea id="successfulResults" placeholder="成果"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="challenges">課題や問題</label>
-          <textarea id="challenges" placeholder="課題や問題"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="feedback">フィードバック</label>
-          <textarea id="feedback" placeholder="フィードバック"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="nextAction">ネクストアクション</label>
-          <textarea id="nextAction" placeholder="次の行動"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="nextGoal">次の目標</label>
-          <textarea id="nextGoal" placeholder="次の目標"></textarea>
-        </div>
-      </details>
-      <button type="button" onclick="addMeeting()">面談作成</button>
-    </form>
-  </div>
-
-  <script src="script.js"></script>
-  <script>
-    // ページ読み込み時、ログインユーザー表示
-    document.addEventListener("DOMContentLoaded", function(){
-      const usernameDisplay = document.getElementById("loggedInUsername");
-      if (usernameDisplay && user) {
-        usernameDisplay.textContent = user.username;
+    </main>
+    <script src="script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (user && document.getElementById("loggedInUsername")) {
+          document.getElementById("loggedInUsername").textContent =
+            user.username;
+        }
+      });
+      function showTab(tab) {
+        const listSection = document.getElementById("meetingsList");
+        const formSection = document.getElementById("meetingForm");
+        if (tab === "list") {
+          listSection.classList.remove("hidden");
+          formSection.classList.add("hidden");
+          loadMeetings();
+        } else {
+          listSection.classList.add("hidden");
+          formSection.classList.remove("hidden");
+        }
       }
-    });
 
-    function showTab(tab) {
-      if (tab === 'list') {
-        document.getElementById("meetingsList").classList.remove("hidden");
-        document.getElementById("meetingForm").classList.add("hidden");
-        loadMeetings();
-      } else if (tab === 'create') {
-        document.getElementById("meetingsList").classList.add("hidden");
-        document.getElementById("meetingForm").classList.remove("hidden");
+      function goToMeetings() {
+        let loadingScreen = document.getElementById("loadingScreen");
+        if (loadingScreen) {
+          loadingScreen.style.display = "flex";
+          setTimeout(function () {
+            window.location.href = "meetings.html";
+          }, 2000);
+        }
       }
-    }
-  </script>
-</body>
+      
+      function goToTasks() {
+        let loadingScreen = document.getElementById("loadingScreen");
+        if (loadingScreen) {
+          loadingScreen.style.display = "flex";
+          setTimeout(function () {
+            window.location.href = "tasks.html";
+          }, 2000);
+        }
+      }
+    </script>
+  </body>
 </html>
