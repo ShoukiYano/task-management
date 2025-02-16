@@ -27,7 +27,6 @@ function login() {
       console.log("ログインAPIレスポンス:", data);
       if (data.username) {
         localStorage.setItem("loggedInUser", JSON.stringify(data));
-        // admin は管理者画面へ、その他はタスク管理画面へ
         window.location.href = (data.username === "admin") ? "admin.html" : "tasks.html";
       } else {
         alert("ログイン失敗: " + (data.message || ""));
@@ -635,7 +634,6 @@ function truncateText(text, n) {
 
 // ======= 既存のハンバーガーメニューおよびロード画面処理 =======
 // ハンバーガーメニューの展開は HTML/CSS 側でチェックボックス (id="actionMenuButton") とラベルで制御
-// 画面遷移時のロード画面処理
 function goToMeetings() {
   let loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
@@ -656,9 +654,9 @@ function goToTasks() {
   }
 }
 
-// ======= DOMContentLoaded 初期化 =======
+// ======= DOMContentLoaded 初期化処理 =======
 document.addEventListener("DOMContentLoaded", function () {
-  // ユーザー名表示（ヘッダー等）
+  // ユーザー名表示
   if (user && document.getElementById("loggedInUsername")) {
     document.getElementById("loggedInUsername").textContent = user.username;
   }
@@ -668,8 +666,8 @@ document.addEventListener("DOMContentLoaded", function () {
     loadUsers();
     loadMeetings();
   }
-
-  // datalist の初期化処理：面談者候補（指定の配列）
+  
+  // datalist の初期化処理：面談者候補（指定の名前配列）
   const datalist = document.getElementById("intervieweeList");
   if (datalist) {
     const names = [
@@ -698,7 +696,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "新延大地","林芹南","上村莉子","松木優衣","福井直樹","友永良太","内田聖香","大居烈",
       "西村優平","島田優","佐藤麗奈","志村天斗","森井奎樹","鈴木友梨","竹田桂子","大谷斗也",
       "池本菜月","大澤柊介","藤野好礼","竹田竣叶","石井和也","大林咲花","山田奈峰子",
-      "長部嵩一朗","富田樂斗","鈴木麗生","成田忠彦","西尾文吾","野村陽咲","出口芽依",
+      "長部嶩一朗","富田樂斗","鈴木麗生","成田忠彦","西尾文吾","野村陽咲","出口芽依",
       "寺岡勇人","田中尊","佐藤裕哉","坂田海人","西村淳生","勝井遼暉","尾﨑稜也","梶山奎哉",
       "高橋広都","河村晃輔","土田歩実","前田柊人","北元蓮太","小林大地","神野太志","清水颯太",
       "赤井友希乃","黄柊基","山口彩耶","速水綾真","岡本響耀","三苫晃暢","一木秀斗","蔡文華",
@@ -730,7 +728,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // ログアウトリンクのイベント設定（id="logoutLink"）
+  // ログアウトリンクのイベント設定
   const logoutLink = document.getElementById("logoutLink");
   if (logoutLink) {
     logoutLink.addEventListener("click", function(e) {
@@ -739,21 +737,21 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // 画面遷移用ボタンのイベント設定（例: goToMeetings, goToTasks）
+  // 画面遷移用ボタンのイベント設定
   const goToMeetingsBtn = document.getElementById("goToMeetingsBtn");
   if (goToMeetingsBtn) {
-    goToMeetingsBtn.addEventListener("click", function() {
+    goToMeetingsBtn.addEventListener("click", function () {
       goToMeetings();
     });
   }
   const goToTasksBtn = document.getElementById("goToTasksBtn");
   if (goToTasksBtn) {
-    goToTasksBtn.addEventListener("click", function() {
+    goToTasksBtn.addEventListener("click", function () {
       goToTasks();
     });
   }
   
-  // 面談タブ切り替えボタンの設定（meetings.html 用）
+  // meetings.html 用：タブ切り替え
   const showMeetingListBtn = document.getElementById("showMeetingListBtn");
   const showMeetingCreateBtn = document.getElementById("showMeetingCreateBtn");
   if (showMeetingListBtn && showMeetingCreateBtn) {
@@ -768,7 +766,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // 面談作成フォームの submit イベント（meetings.html 用）
+  // meetings.html 用：面談作成フォームの submit イベント
   const createMeetingForm = document.getElementById("createMeetingForm");
   if (createMeetingForm) {
     createMeetingForm.addEventListener("submit", function (e) {
@@ -777,8 +775,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-
-// ======= 追加：面談追加処理 =======
+  
+// ======= 面談追加処理 =======
 function addMeeting() {
   if (!user) return;
   const newMeeting = {
@@ -786,9 +784,9 @@ function addMeeting() {
     location: document.getElementById("location").value.trim(),
     interviewer: document.getElementById("interviewer").value,
     interviewee: document.getElementById("interviewee").value.trim(),
-    interviewee_name: "", // 必要に応じて入力または省略
-    interviewee_affiliation: "", // 必要に応じて入力または省略
-    interviewee_position: "", // 必要に応じて入力または省略
+    interviewee_name: "", 
+    interviewee_affiliation: "", 
+    interviewee_position: "",
     job_description: document.getElementById("jobDescription").value.trim(),
     goal: document.getElementById("goal").value.trim(),
     goal_status: document.getElementById("goalStatus").value.trim(),
@@ -818,24 +816,22 @@ function addMeeting() {
 }
 
 // ======= 画面遷移用ロード画面処理 =======
-document.addEventListener("DOMContentLoaded", function () {
-  // 他の初期化処理…
-
-  // 画面遷移用ボタンのイベント設定
-  const goToMeetingsBtn = document.getElementById("goToMeetingsBtn");
-  if (goToMeetingsBtn) {
-    goToMeetingsBtn.addEventListener("click", function () {
-      goToMeetings();
-    });
+function goToMeetings() {
+  let loadingScreen = document.getElementById("loadingScreen");
+  if (loadingScreen) {
+    loadingScreen.style.display = "flex";
+    setTimeout(function () {
+      window.location.href = "meetings.html";
+    }, 2000);
   }
-});
+}
 
-
-document.addEventListener('DOMContentLoaded', function() {
-  const goToTasksBtn = document.getElementById('goToTasksBtn');
-  if (goToTasksBtn) {
-    goToTasksBtn.addEventListener('click', function() {
-      goToTasks();
-    });
+function goToTasks() {
+  let loadingScreen = document.getElementById("loadingScreen");
+  if (loadingScreen) {
+    loadingScreen.style.display = "flex";
+    setTimeout(function () {
+      window.location.href = "tasks.html";
+    }, 2000);
   }
-})
+}

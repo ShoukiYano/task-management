@@ -182,30 +182,5 @@
       </div>
   </main>
   <script src="script.js"></script>
-  <script>
-    function goToMeetings() {
-      let loadingScreen = document.getElementById("loadingScreen");
-      if (loadingScreen) {
-        loadingScreen.style.display = "flex";
-        setTimeout(function () {
-          window.location.href = "meetings.html";
-        }, 2000);
-      }
-    }
-    
-    function goToTasks() {
-      let loadingScreen = document.getElementById("loadingScreen");
-      if (loadingScreen) {
-        loadingScreen.style.display = "flex";
-        setTimeout(function () {
-          window.location.href = "tasks.html";
-        }, 2000);
-      }
-    }
-    function logout() {
-      localStorage.removeItem("loggedInUser");
-      window.location.href = "login.html";
-    }
-  </script>
 </body>
 </html>

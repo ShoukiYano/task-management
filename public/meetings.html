@@ -215,50 +215,5 @@
       </div>
     </main>
     <script src="script.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        if (user && document.getElementById("loggedInUsername")) {
-          document.getElementById("loggedInUsername").textContent =
-            user.username;
-        }
-      });
-      function showTab(tab) {
-        const listSection = document.getElementById("meetingsList");
-        const formSection = document.getElementById("meetingForm");
-        if (tab === "list") {
-          listSection.classList.remove("hidden");
-          formSection.classList.add("hidden");
-          loadMeetings();
-        } else {
-          listSection.classList.add("hidden");
-          formSection.classList.remove("hidden");
-        }
-      }
-
-      function goToMeetings() {
-        let loadingScreen = document.getElementById("loadingScreen");
-        if (loadingScreen) {
-          loadingScreen.style.display = "flex";
-          setTimeout(function () {
-            window.location.href = "meetings.html";
-          }, 2000);
-        }
-      }
-      
-      function goToTasks() {
-        let loadingScreen = document.getElementById("loadingScreen");
-        if (loadingScreen) {
-          loadingScreen.style.display = "flex";
-          setTimeout(function () {
-            window.location.href = "tasks.html";
-          }, 2000);
-        }
-      }
-
-      function logout() {
-        localStorage.removeItem("loggedInUser");
-        window.location.href = "login.html";
-      }
-    </script>
   </body>
 </html>
