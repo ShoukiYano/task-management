@@ -13,28 +13,42 @@ if (!["login.html", "register.html", ""].includes(currentPage) && !user) {
 function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
+
+  // デバッグ用に入力値を表示
+  console.log("ログイン処理開始:", { email, password });
+
   fetch(`${API_URL}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password })
   })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error("ネットワークレスポンスエラー");
+      }
+      return res.json();
+    })
     .then(data => {
+      console.log("ログインAPIレスポンス:", data);
       if (data.username) {
         localStorage.setItem("loggedInUser", JSON.stringify(data));
+        // ユーザーが admin の場合は管理者画面へ、それ以外はタスク管理画面へ
         window.location.href = (data.username === "admin") ? "admin.html" : "tasks.html";
       } else {
-        alert("ログイン失敗");
+        alert("ログイン失敗: " + (data.message || ""));
       }
     })
-    .catch(error => console.error("ログインエラー:", error));
+    .catch(error => {
+      console.error("ログインエラー:", error);
+      alert("ログイン中にエラーが発生しました");
+    });
 }
 
-// 既存の register 関数（ユーザー登録処理）
 function register() {
   const email = document.getElementById("regEmail").value.trim();
   const username = document.getElementById("regUsername").value.trim();
   const password = document.getElementById("regPassword").value.trim();
+
   fetch(`${API_URL}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -49,18 +63,6 @@ function register() {
     })
     .catch(error => console.error("登録エラー:", error));
 }
-
-// DOMContentLoaded 時に registerForm の submit イベントを設定
-document.addEventListener("DOMContentLoaded", function () {
-  const registerForm = document.getElementById("registerForm");
-  if (registerForm) {
-    registerForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      register();
-    });
-  }
-});
-
 
 function loadUsers() {
   fetch(`${API_URL}/users`)
@@ -152,6 +154,7 @@ function loadTasks() {
         window.modalShown = true;
         showDeadlineWarningModal(tasksWithWarning);
       }
+      bindTaskButtons();
     })
     .catch(error => console.error("タスク取得エラー:", error));
 }
@@ -184,7 +187,6 @@ function approveTask(taskId) {
   if (btnDiv) {
     btnDiv.innerHTML = `<button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
                         <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
-    // イベントリスナーを後から設定（以下のコードで bind）
     bindTaskButtons();
   }
 }
@@ -200,7 +202,6 @@ function rejectTask(taskId) {
   }
 }
 
-// タスクボタン（編集、削除）のイベントリスナーを設定
 function bindTaskButtons() {
   const editButtons = document.querySelectorAll(".edit-btn");
   editButtons.forEach(btn => {
@@ -646,8 +647,8 @@ function truncateText(text, n) {
 /* ================================
    既存のハンバーガーメニューおよびロード画面処理
 ================================ */
-// ハンバーガーメニューの展開は HTML/CSS 側でチェックボックス（id="actionMenuButton"）とラベルにより制御
-// ここでは、ロード画面の処理を既存コードに準じて記述
+// ハンバーガーメニューは HTML/CSS 側でチェックボックス（id="actionMenuButton"）とラベルで制御
+// ここでは、ロード画面処理を既存コードに準じて記述
 
 function goToMeetings() {
   let loadingScreen = document.getElementById("loadingScreen");
@@ -673,7 +674,7 @@ function goToTasks() {
    DOMContentLoaded 初期化処理
 ================================ */
 document.addEventListener("DOMContentLoaded", function () {
-  // ユーザー名表示（各ヘッダー用）
+  // ユーザー名表示（ヘッダーなど）
   if (user && document.getElementById("loggedInUsername")) {
     document.getElementById("loggedInUsername").textContent = user.username;
   }
@@ -727,7 +728,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // loginForm の submit イベント（ログイン処理）
+  // loginForm の submit イベント設定（ログイン処理）
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", function(e) {
@@ -736,7 +737,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // ログアウトリンクのイベント設定（id="logoutLink" を HTML に用意する）
+  // ログアウトリンクのイベント設定（id="logoutLink" を HTML に用意）
   const logoutLink = document.getElementById("logoutLink");
   if (logoutLink) {
     logoutLink.addEventListener("click", function(e) {
