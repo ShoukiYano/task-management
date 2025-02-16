@@ -132,8 +132,19 @@ function loadTasks() {
                   <p>優先度: ${task.priority} | ステータス: ${task.status}</p>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
                   <div class="task-buttons" id="task-buttons-${task.id}">
-                    <button data-task-id="${task.id}" class="approve-btn">承認</button>
-                    <button data-task-id="${task.id}" class="reject-btn">却下</button>
+                    ${
+                      !task.approval || task.approval === "pending"
+                        ? `<button data-task-id="${task.id}" class="approve-btn">承認</button>
+                           <button data-task-id="${task.id}" class="reject-btn">却下</button>`
+                        : task.approval === "approved"
+                          ? `<button data-task-id="${task.id}" class="edit-btn">✏️ 編集</button>
+                             <button data-task-id="${task.id}" class="delete-btn">🗑️ 削除</button>`
+                          : task.approval === "rejected"
+                            ? `<p style="color:red;">${task.assignee}からタスクを却下しました。</p>
+                               <button data-task-id="${task.id}" class="edit-btn">✏️ 編集</button>
+                               <button data-task-id="${task.id}" class="delete-btn">🗑️ 削除</button>`
+                            : ""
+                    }
                   </div>
                 </div>
               `;
@@ -146,6 +157,7 @@ function loadTasks() {
         showDeadlineWarningModal(tasksWithWarning);
       }
       bindTaskButtons();
+      bindApprovalButtons();
     })
     .catch(error => console.error("タスク取得エラー:", error));
 }
@@ -178,24 +190,65 @@ function addTask() {
     .catch(error => console.error("タスク追加エラー:", error));
 }
 
+function updateApprovalStatus(taskId, status) {
+  // status: "approved" または "rejected"
+  fetch(`${API_URL}/tasks/${taskId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approval: status })
+  })
+    .then(res => {
+      if (!res.ok) return res.json().then(err => { throw new Error(err.message); });
+      return res.json();
+    })
+    .then(task => {
+      const btnDiv = document.getElementById(`task-buttons-${taskId}`);
+      if (btnDiv) {
+        if (status === "approved") {
+          btnDiv.innerHTML = `<button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
+                              <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
+        } else if (status === "rejected") {
+          btnDiv.innerHTML = `<p style="color:red;">${task.assignee}からタスクを却下しました。</p>
+                              <button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
+                              <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
+        }
+      }
+      bindTaskButtons();
+    })
+    .catch(error => console.error("タスク承認/却下更新エラー:", error));
+}
+
+function bindApprovalButtons() {
+  // 承認ボタンのイベント
+  const approveButtons = document.querySelectorAll(".approve-btn");
+  approveButtons.forEach(btn => {
+    btn.removeEventListener("click", approveButtonHandler);
+    btn.addEventListener("click", approveButtonHandler);
+  });
+  // 却下ボタンのイベント
+  const rejectButtons = document.querySelectorAll(".reject-btn");
+  rejectButtons.forEach(btn => {
+    btn.removeEventListener("click", rejectButtonHandler);
+    btn.addEventListener("click", rejectButtonHandler);
+  });
+}
+
+function approveButtonHandler(e) {
+  const taskId = e.target.getAttribute("data-task-id");
+  updateApprovalStatus(taskId, "approved");
+}
+
+function rejectButtonHandler(e) {
+  const taskId = e.target.getAttribute("data-task-id");
+  updateApprovalStatus(taskId, "rejected");
+}
+
 function approveTask(taskId) {
-  const btnDiv = document.getElementById(`task-buttons-${taskId}`);
-  if (btnDiv) {
-    btnDiv.innerHTML = `<button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
-                        <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
-    bindTaskButtons();
-  }
+  // ※UI更新は updateApprovalStatus 内で行います
 }
 
 function rejectTask(taskId) {
-  const task = tasksData.find(t => t.id === taskId);
-  const btnDiv = document.getElementById(`task-buttons-${taskId}`);
-  if (btnDiv && task) {
-    btnDiv.innerHTML = `<p class="reject-msg">${task.assignee}から却下されました</p>
-                        <button data-task-id="${taskId}" class="edit-btn">✏️ 編集</button>
-                        <button data-task-id="${taskId}" class="delete-btn">🗑️ 削除</button>`;
-    bindTaskButtons();
-  }
+  // ※UI更新は updateApprovalStatus 内で行います
 }
 
 function bindTaskButtons() {
@@ -688,12 +741,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
   
-  // ★ ここでタスク追加フォームの送信イベントをハンドリング（修正ポイント） ★
+  // ★ タスク追加フォームの送信イベント（ページリロード防止＆タスク追加処理実行） ★
   const taskForm = document.getElementById("taskForm");
   if (taskForm) {
     taskForm.addEventListener("submit", function(e) {
-      e.preventDefault(); // ページリロード防止
-      addTask();          // タスク追加処理を実行
+      e.preventDefault();
+      addTask();
     });
   }
   

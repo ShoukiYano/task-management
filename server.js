@@ -126,9 +126,10 @@ app.post('/tasks', async (req, res) => {
   try {
     const now = new Date().toISOString();
     const id = uuidv4();
+    // ※approval カラムは初期状態 "pending" とする前提
     const result = await pool.query(
-      "INSERT INTO tasks (id, name, description, status, priority, assignee, creator, deadline, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
-      [id, name, description, status, priority, assignee, creator, deadline, now, now]
+      "INSERT INTO tasks (id, name, description, status, priority, assignee, creator, deadline, approval, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *",
+      [id, name, description, status, priority, assignee, creator, deadline, "pending", now, now]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -139,7 +140,7 @@ app.post('/tasks', async (req, res) => {
 
 app.put('/tasks/:id', async (req, res) => {
   const taskId = req.params.id;
-  const { name, description, status, priority, assignee, deadline } = req.body;
+  const { name, description, status, priority, assignee, deadline, approval } = req.body;
   try {
     const fields = [];
     const values = [];
@@ -150,6 +151,7 @@ app.put('/tasks/:id', async (req, res) => {
     if (priority) { fields.push(`priority = $${idx}`); values.push(priority); idx++; }
     if (assignee) { fields.push(`assignee = $${idx}`); values.push(assignee); idx++; }
     if (deadline) { fields.push(`deadline = $${idx}`); values.push(deadline); idx++; }
+    if (approval) { fields.push(`approval = $${idx}`); values.push(approval); idx++; }
     fields.push(`updated_at = $${idx}`);
     values.push(new Date().toISOString());
     idx++;
