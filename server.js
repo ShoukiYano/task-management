@@ -9,11 +9,13 @@ const helmet = require('helmet');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ミドルウェア設定
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// PostgreSQL 接続プールの設定
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || "postgresql://postgres:XmuQMfyOkrrugmLpWFweqzidUqlozhsq@viaduct.proxy.rlwy.net:18155/railway?sslmode=require",
   ssl: { rejectUnauthorized: false }
@@ -39,7 +41,6 @@ const pool = new Pool({
 /* ================================
    ユーザー管理 API
 ================================ */
-// ログイン API
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -60,7 +61,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 新規登録 API
 app.post('/register', async (req, res) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
@@ -83,7 +83,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// ユーザー一覧取得 API
 app.get('/users', async (req, res) => {
   try {
     const result = await pool.query("SELECT username, email FROM users");
@@ -97,7 +96,6 @@ app.get('/users', async (req, res) => {
 /* ================================
    タスク管理 API
 ================================ */
-// タスク取得 API
 app.get('/tasks/:username', async (req, res) => {
   const username = decodeURIComponent(req.params.username);
   console.log(`🔹 タスクを取得 - ユーザー名: ${username}`);
@@ -118,7 +116,6 @@ app.get('/tasks/:username', async (req, res) => {
   }
 });
 
-// タスク追加 API
 app.post('/tasks', async (req, res) => {
   const { name, description, status, priority, assignee, creator, deadline } = req.body;
   if (!name || !description || !status || !priority || !assignee || !creator || !deadline) {
@@ -138,7 +135,6 @@ app.post('/tasks', async (req, res) => {
   }
 });
 
-// タスク更新 API
 app.put('/tasks/:id', async (req, res) => {
   const taskId = req.params.id;
   const { name, description, status, priority, assignee, deadline } = req.body;
@@ -168,7 +164,6 @@ app.put('/tasks/:id', async (req, res) => {
   }
 });
 
-// タスク削除 API
 app.delete('/tasks/:id', async (req, res) => {
   const taskId = req.params.id;
   try {
@@ -186,7 +181,6 @@ app.delete('/tasks/:id', async (req, res) => {
 /* ================================
    面談管理 API
 ================================ */
-// 面談追加 API
 app.post('/meetings', async (req, res) => {
   const {
     meeting_date, location, interviewer, interviewee,
@@ -218,7 +212,6 @@ app.post('/meetings', async (req, res) => {
   }
 });
 
-// 面談取得 API
 app.get('/meetings/:username', async (req, res) => {
   const username = req.params.username;
   try {
@@ -238,7 +231,6 @@ app.get('/meetings/:username', async (req, res) => {
   }
 });
 
-// 面談更新 API
 app.put('/meetings/:id', async (req, res) => {
   const meetingId = req.params.id;
   const allowedFields = [
@@ -281,7 +273,6 @@ app.put('/meetings/:id', async (req, res) => {
   }
 });
 
-// 面談削除 API
 app.delete('/meetings/:id', async (req, res) => {
   const meetingId = req.params.id;
   try {
@@ -296,6 +287,19 @@ app.delete('/meetings/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// サーバー起動
+const server = app.listen(PORT, () => {
   console.log(`✅ Server is running on http://localhost:${PORT}`);
+});
+
+// SIGTERM を受信した際の graceful shutdown 処理
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    pool.end().then(() => {
+      console.log('Database pool ended');
+      process.exit(0);
+    });
+  });
 });
