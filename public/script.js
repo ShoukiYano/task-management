@@ -11,7 +11,6 @@ if (currentPage !== "login.html" && currentPage !== "register.html" && !user) {
 
 /* ================================
    ログイン処理・新規登録・ユーザー取得
-   （既存コードそのまま）
 ================================ */
 function login() {
   const email = document.getElementById("email").value;
@@ -81,8 +80,12 @@ function loadUsers() {
 }
 
 /* ================================
-   タスク管理（既存コードそのまま）
+   タスク管理
 ================================ */
+
+// グローバル変数：タスク一覧データを保持
+let tasksData = [];
+
 function loadTasks() {
   if (!user) return;
   const username = encodeURIComponent(user.username);
@@ -95,6 +98,9 @@ function loadTasks() {
       return res.json();
     })
     .then(tasks => {
+      // 期限が早い順に昇順ソート
+      tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      tasksData = tasks;
       const tasksContainer = document.getElementById("tasks");
       let tasksWithWarning = [];
 
@@ -115,9 +121,9 @@ function loadTasks() {
                   <strong>${task.name}</strong> - ${task.description}<br>
                   <small class="${deadlineClass}">期限: ${deadlineDate.toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })} | 優先度: ${task.priority} | ステータス: ${task.status}</small>
                   <p>担当: ${task.assignee} | 作成: ${task.creator}</p>
-                  <div class="task-buttons">
-                    <button onclick="editTask('${task.id}')">✏️ 編集</button>
-                    <button onclick="deleteTask('${task.id}')">🗑️ 削除</button>
+                  <div class="task-buttons" id="task-buttons-${task.id}">
+                    <button onclick="approveTask('${task.id}')">承認</button>
+                    <button onclick="rejectTask('${task.id}')">却下</button>
                   </div>
                 </div>
               `;
@@ -133,6 +139,30 @@ function loadTasks() {
     .catch(error => console.error("❌ タスク取得エラー:", error));
 }
 
+// 承認ボタンを押すとボタンを編集／削除に切り替え
+function approveTask(taskId) {
+  const btnDiv = document.getElementById(`task-buttons-${taskId}`);
+  if (btnDiv) {
+    btnDiv.innerHTML = `
+      <button onclick="editTask('${taskId}')">✏️ 編集</button>
+      <button onclick="deleteTask('${taskId}')">🗑️ 削除</button>
+    `;
+  }
+}
+
+// 却下ボタンを押すと赤文字メッセージ＋編集／削除ボタンに切り替え
+function rejectTask(taskId) {
+  const task = tasksData.find(t => t.id === taskId);
+  const btnDiv = document.getElementById(`task-buttons-${taskId}`);
+  if (btnDiv && task) {
+    btnDiv.innerHTML = `
+      <p style="color:red; margin:0;">${task.assignee}から却下されました</p>
+      <button onclick="editTask('${taskId}')">✏️ 編集</button>
+      <button onclick="deleteTask('${taskId}')">🗑️ 削除</button>
+    `;
+  }
+}
+
 function showDeadlineWarningModal(tasksWithWarning) {
   const existingModal = document.getElementById('deadlineModal');
   if (existingModal) {
@@ -140,16 +170,36 @@ function showDeadlineWarningModal(tasksWithWarning) {
   }
   const modal = document.createElement('div');
   modal.id = 'deadlineModal';
-  modal.className = 'modal';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '10000';
 
   const modalContent = document.createElement('div');
   modalContent.className = 'modal-content';
+  modalContent.style.background = '#fff';
+  modalContent.style.padding = '20px';
+  modalContent.style.borderRadius = '8px';
+  modalContent.style.maxWidth = '500px';
+  modalContent.style.textAlign = 'center';
+  modalContent.style.position = 'relative';
 
   const closeButton = document.createElement('span');
   closeButton.className = 'close-modal';
   closeButton.innerHTML = '&times;';
+  closeButton.style.position = 'absolute';
+  closeButton.style.top = '10px';
+  closeButton.style.right = '20px';
+  closeButton.style.cursor = 'pointer';
+  closeButton.style.fontSize = '24px';
   closeButton.addEventListener('click', function() {
-    modal.style.display = 'none';
+    modal.remove();
   });
 
   const header = document.createElement('h2');
@@ -157,7 +207,6 @@ function showDeadlineWarningModal(tasksWithWarning) {
 
   const tasksListDiv = document.createElement('div');
   tasksListDiv.className = 'modal-tasks';
-
   tasksWithWarning.forEach(task => {
     const deadlineDate = new Date(task.deadline);
     const taskItem = document.createElement('div');
@@ -171,8 +220,6 @@ function showDeadlineWarningModal(tasksWithWarning) {
   modalContent.appendChild(tasksListDiv);
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
-
-  modal.style.display = 'block';
 }
 
 function addTask() {
@@ -207,178 +254,107 @@ function addTask() {
     .catch(error => console.error("タスク追加エラー:", error));
 }
 
+/* ---------- タスク編集（モーダルウィンドウ） ---------- */
 function editTask(taskId) {
-  const newName = prompt("新しいタスク名を入力してください:");
-  if (newName === null) return;
-  const newDescription = prompt("新しいタスク内容を入力してください:");
-  if (newDescription === null) return;
-  const newDeadline = prompt("新しい期限 (YYYY-MM-DD) を入力してください:");
-  if (newDeadline === null) return;
-  const newStatus = prompt("新しいステータスを入力してください (未着手 / 進行中 / 完了 / 保留):");
-  if (newStatus === null) return;
-  const newPriority = prompt("新しい優先度を入力してください (低 / 中 / 高 / 緊急):");
-  if (newPriority === null) return;
-  const newAssignee = prompt("新しい担当者のユーザー名を入力してください:");
-  if (newAssignee === null) return;
+  const task = tasksData.find(t => t.id === taskId);
+  if (!task) return;
+  showTaskEditModal(task);
+}
 
+function showTaskEditModal(task) {
+  const modal = document.createElement('div');
+  modal.id = 'taskEditModal';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '10000';
+
+  const modalContent = document.createElement('div');
+  modalContent.style.background = '#fff';
+  modalContent.style.padding = '20px';
+  modalContent.style.borderRadius = '8px';
+  modalContent.style.width = '90%';
+  modalContent.style.maxWidth = '500px';
+  modalContent.style.position = 'relative';
+
+  // 右上の✕ボタンでモーダルを閉じる
+  const closeButton = document.createElement('span');
+  closeButton.innerHTML = '&times;';
+  closeButton.style.position = 'absolute';
+  closeButton.style.top = '10px';
+  closeButton.style.right = '20px';
+  closeButton.style.cursor = 'pointer';
+  closeButton.style.fontSize = '24px';
+  closeButton.addEventListener('click', function() {
+    modal.remove();
+  });
+  modalContent.appendChild(closeButton);
+
+  modalContent.innerHTML += `
+    <h2>タスク編集</h2>
+    <div class="form-group">
+      <label for="edit_task_name">タスク名</label>
+      <input type="text" id="edit_task_name" value="${task.name}" placeholder="タスク名" required>
+    </div>
+    <div class="form-group">
+      <label for="edit_task_description">タスク内容</label>
+      <input type="text" id="edit_task_description" value="${task.description}" placeholder="タスク内容" required>
+    </div>
+    <div class="form-group">
+      <label for="edit_task_deadline">期限</label>
+      <input type="date" id="edit_task_deadline" value="${task.deadline}" required>
+    </div>
+    <div class="form-group">
+      <label for="edit_task_status">ステータス</label>
+      <select id="edit_task_status" required>
+        <option value="未着手" ${task.status === "未着手" ? "selected" : ""}>未着手</option>
+        <option value="進行中" ${task.status === "進行中" ? "selected" : ""}>進行中</option>
+        <option value="完了" ${task.status === "完了" ? "selected" : ""}>完了</option>
+        <option value="保留" ${task.status === "保留" ? "selected" : ""}>保留</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="edit_task_priority">優先度</label>
+      <select id="edit_task_priority" required>
+        <option value="低" ${task.priority === "低" ? "selected" : ""}>低</option>
+        <option value="中" ${task.priority === "中" ? "selected" : ""}>中</option>
+        <option value="高" ${task.priority === "高" ? "selected" : ""}>高</option>
+        <option value="緊急" ${task.priority === "緊急" ? "selected" : ""}>緊急</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="edit_task_assignee">担当者</label>
+      <select  id="edit_task_assignee" value="${task.assignee}" required></select>
+    </div>
+    <div style="text-align: right; margin-top: 20px;">
+      <button type="button" onclick="submitTaskEdit('${task.id}')">保存</button>
+      <button type="button" onclick="document.getElementById('taskEditModal').remove()">キャンセル</button>
+    </div>
+  `;
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+}
+
+function submitTaskEdit(taskId) {
   const updatedTask = {
-    name: newName,
-    description: newDescription,
-    deadline: newDeadline,
-    status: newStatus,
-    priority: newPriority,
-    assignee: newAssignee
+    name: document.getElementById('edit_task_name').value,
+    description: document.getElementById('edit_task_description').value,
+    deadline: document.getElementById('edit_task_deadline').value,
+    status: document.getElementById('edit_task_status').value,
+    priority: document.getElementById('edit_task_priority').value,
+    assignee: document.getElementById('edit_task_assignee').value
   };
 
   fetch(`${API_URL}/tasks/${taskId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updatedTask)
-  })
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
-      }
-      return res.json();
-    })
-    .then(() => loadTasks())
-    .catch(error => console.error("タスク更新エラー:", error));
-}
-
-function deleteTask(taskId) {
-  if (!confirm("タスクを削除してもよろしいですか？")) return;
-
-  fetch(`${API_URL}/tasks/${taskId}`, {
-    method: "DELETE"
-  })
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
-      }
-      return res.json();
-    })
-    .then(() => loadTasks())
-    .catch(error => console.error("タスク削除エラー:", error));
-}
-
-/* ================================
-   面談管理機能（Meeting Management）
-================================ */
-
-// 担当者／面談者の一覧取得（ユーザー一覧APIを再利用）
-function loadMeetingUsers() {
-  fetch(`${API_URL}/users`)
-    .then(res => res.json())
-    .then(users => {
-      const interviewerSelect = document.getElementById("interviewer");
-      const intervieweeSelect = document.getElementById("interviewee");
-      if (interviewerSelect) {
-        interviewerSelect.innerHTML = "";
-        users.forEach(u => {
-          const option = document.createElement("option");
-          option.value = u.username;
-          option.textContent = u.username;
-          interviewerSelect.appendChild(option);
-        });
-      }
-      if (intervieweeSelect) {
-        intervieweeSelect.innerHTML = "";
-        users.forEach(u => {
-          const option = document.createElement("option");
-          option.value = u.username;
-          option.textContent = u.username;
-          intervieweeSelect.appendChild(option);
-        });
-      }
-    })
-    .catch(err => console.error("Error loading meeting users:", err));
-}
-
-// 面談一覧取得
-function loadMeetings() {
-  if (!user) return;
-  const username = encodeURIComponent(user.username);
-  fetch(`${API_URL}/meetings/${username}`)
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
-      }
-      return res.json();
-    })
-    .then(meetings => {
-      const meetingsList = document.getElementById("meetingsList");
-      if (meetingsList) {
-        if (meetings.length) {
-          meetingsList.innerHTML = meetings.map(meeting => `
-            <div class="meeting-card">
-              <strong>面談日: ${new Date(meeting.meeting_date).toLocaleString("ja-JP")}</strong><br>
-              <small>場所: ${meeting.location || ''}</small><br>
-              <p>担当者: ${meeting.interviewer} | 面談者: ${meeting.interviewee}</p>
-              <p>面談者情報: ${meeting.interviewee_name || ''}, ${meeting.interviewee_affiliation || ''}, ${meeting.interviewee_position || ''}</p>
-              <p>業務内容・目標: ${meeting.job_description || ''} / 目標: ${meeting.goal || ''} (達成状況: ${meeting.goal_status || ''})</p>
-              <p>アクション: ${meeting.actions_taken || ''} / 成果: ${meeting.successful_results || ''}</p>
-              <p>課題: ${meeting.challenges || ''}</p>
-              <p>フィードバック: ${meeting.feedback || ''}</p>
-              <p>次のアクション: ${meeting.next_action || ''} / 次の目標: ${meeting.next_goal || ''}</p>
-              <div class="meeting-buttons">
-                <button onclick="editMeeting('${meeting.id}')">編集</button>
-                <button onclick="deleteMeeting('${meeting.id}')">削除</button>
-              </div>
-            </div>
-          `).join("");
-        } else {
-          meetingsList.innerHTML = "<p>面談はありません。</p>";
-        }
-      }
-    })
-    .catch(err => console.error("Error loading meetings:", err));
-}
-
-// 面談追加
-function addMeeting() {
-  if (!user) return;
-  const interviewer = document.getElementById("interviewer").value;
-  const interviewee = document.getElementById("interviewee").value;
-  const meetingDate = document.getElementById("meetingDate").value;
-  const locationVal = document.getElementById("location").value;
-  // ※面談者情報の入力フィールドが存在しない場合は不要です
-  // const intervieweeName = document.getElementById("name").value;
-  // const intervieweeAffiliation = document.getElementById("affiliation").value;
-  // const intervieweePosition = document.getElementById("position").value;
-  const jobDescription = document.getElementById("jobDescription").value;
-  const goal = document.getElementById("goal").value;
-  const goalStatus = document.getElementById("goalStatus").value;
-  const actionsTaken = document.getElementById("actionsTaken").value;
-  const successfulResults = document.getElementById("successfulResults").value;
-  const challenges = document.getElementById("challenges").value;
-  const feedback = document.getElementById("feedback").value;
-  const nextAction = document.getElementById("nextAction").value;
-  const nextGoal = document.getElementById("nextGoal").value;
-  
-  const newMeeting = {
-    meeting_date: meetingDate,
-    location: locationVal,
-    interviewer,
-    interviewee,
-    // 面談者情報が必要な場合は以下のように追加（フォームに対応する入力があることを確認してください）:
-    // interviewee_name: intervieweeName,
-    // interviewee_affiliation: intervieweeAffiliation,
-    // interviewee_position: intervieweePosition,
-    job_description: jobDescription,
-    goal,
-    goal_status: goalStatus,
-    actions_taken: actionsTaken,
-    successful_results: successfulResults,
-    challenges,
-    feedback,
-    next_action: nextAction,
-    next_goal: nextGoal
-  };
-  
-  fetch(`${API_URL}/meetings`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(newMeeting)
   })
   .then(res => {
     if (!res.ok) {
@@ -387,53 +363,18 @@ function addMeeting() {
     return res.json();
   })
   .then(data => {
-    alert("面談が作成されました");
-    document.getElementById("createMeetingForm").reset();
-    // 作成後、一覧タブに切り替え、最新情報を再取得
-    showTab('list');
+    alert("タスクが更新されました");
+    document.getElementById('taskEditModal').remove();
+    loadTasks();
   })
-  .catch(err => console.error("Error creating meeting:", err));
+  .catch(err => console.error("タスク更新エラー:", err));
 }
 
+/* ---------- タスク削除 ---------- */
+function deleteTask(taskId) {
+  if (!confirm("タスクを削除してもよろしいですか？")) return;
 
-function editMeeting(meetingId) {
-  const newMeetingDate = prompt("新しい面談日 (YYYY-MM-DD):");
-  if (newMeetingDate === null) return;
-  const newLocation = prompt("新しい場所:");
-  if (newLocation === null) return;
-  const newInterviewer = prompt("新しい担当者:");
-  if (newInterviewer === null) return;
-  const newInterviewee = prompt("新しい面談者:");
-  if (newInterviewee === null) return;
-  const newFeedback = prompt("新しいフィードバック:");
-  if (newFeedback === null) return;
-  
-  const updatedMeeting = {
-    meeting_date: newMeetingDate,
-    location: newLocation,
-    interviewer: newInterviewer,
-    interviewee: newInterviewee,
-    feedback: newFeedback
-  };
-  
-  fetch(`${API_URL}/meetings/${meetingId}`, {
-    method: "PUT",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(updatedMeeting)
-  })
-  .then(res => {
-    if (!res.ok) {
-       return res.json().then(err => { throw new Error(err.message); });
-    }
-    return res.json();
-  })
-  .then(() => loadMeetings())
-  .catch(err => console.error("Error updating meeting:", err));
-}
-
-function deleteMeeting(meetingId) {
-  if (!confirm("面談を削除してもよろしいですか？")) return;
-  fetch(`${API_URL}/meetings/${meetingId}`, {
+  fetch(`${API_URL}/tasks/${taskId}`, {
     method: "DELETE"
   })
   .then(res => {
@@ -442,112 +383,79 @@ function deleteMeeting(meetingId) {
     }
     return res.json();
   })
-  .then(() => loadMeetings())
-  .catch(err => console.error("Error deleting meeting:", err));
+  .then(() => loadTasks())
+  .catch(error => console.error("タスク削除エラー:", error));
 }
 
-function logout() {
-  localStorage.removeItem("loggedInUser");
-  window.location.href = "login.html";
-}
+/* ================================
+   面談管理機能（Meeting Management）
+================================ */
 
-document.addEventListener("DOMContentLoaded", function () {
-  const usernameDisplay = document.getElementById("loggedInUsername");
-  if (usernameDisplay && user) {
-    usernameDisplay.textContent = user.username;
-  }
-  if (document.getElementById("assignee")) {
-    loadUsers();
-  }
-  if (document.getElementById("tasks")) {
-    loadTasks();
-  }
-  // 面談管理画面の場合
-  if (document.getElementById("meetingsList")) {
-    loadMeetingUsers();
-    loadMeetings();
-  }
-});
-
-// --- ユーティリティ関数 ---
-function truncateText(text, n) {
-  if (!text) return "";
-  return text.length > n ? text.substring(0, n) + "…" : text;
-}
-
-// --- 面談管理機能（Meeting Management） ---
-
-// グローバルに取得済み面談データを保持（モーダル用）
 let meetingsData = [];
 
-// 担当者／面談者の一覧取得（ユーザー一覧APIを再利用）
 function loadMeetingUsers() {
   fetch(`${API_URL}/users`)
-    .then(res => res.json())
-    .then(users => {
-      const interviewerSelect = document.getElementById("interviewer");
-      const intervieweeSelect = document.getElementById("interviewee");
-      if (interviewerSelect) {
-        interviewerSelect.innerHTML = "";
-        users.forEach(u => {
-          const option = document.createElement("option");
-          option.value = u.username;
-          option.textContent = u.username;
-          interviewerSelect.appendChild(option);
-        });
-      }
-      if (intervieweeSelect) {
-        intervieweeSelect.innerHTML = "";
-        users.forEach(u => {
-          const option = document.createElement("option");
-          option.value = u.username;
-          option.textContent = u.username;
-          intervieweeSelect.appendChild(option);
-        });
-      }
-    })
-    .catch(err => console.error("Error loading meeting users:", err));
+  .then(res => res.json())
+  .then(users => {
+    const interviewerSelect = document.getElementById("interviewer");
+    const intervieweeSelect = document.getElementById("interviewee");
+    if (interviewerSelect) {
+      interviewerSelect.innerHTML = "";
+      users.forEach(u => {
+        const option = document.createElement("option");
+        option.value = u.username;
+        option.textContent = u.username;
+        interviewerSelect.appendChild(option);
+      });
+    }
+    if (intervieweeSelect) {
+      intervieweeSelect.innerHTML = "";
+      users.forEach(u => {
+        const option = document.createElement("option");
+        option.value = u.username;
+        option.textContent = u.username;
+        intervieweeSelect.appendChild(option);
+      });
+    }
+  })
+  .catch(err => console.error("Error loading meeting users:", err));
 }
 
-// 面談一覧取得（表示内容は50文字以上なら省略）
 function loadMeetings() {
   if (!user) return;
   const username = encodeURIComponent(user.username);
   fetch(`${API_URL}/meetings/${username}`)
-    .then(res => {
-      if (!res.ok) {
-        return res.json().then(err => { throw new Error(err.message); });
+  .then(res => {
+    if (!res.ok) {
+      return res.json().then(err => { throw new Error(err.message); });
+    }
+    return res.json();
+  })
+  .then(meetings => {
+    meetingsData = meetings;
+    const meetingsList = document.getElementById("meetingsList");
+    if (meetingsList) {
+      if (meetings.length) {
+        meetingsList.innerHTML = meetings.map(meeting => `
+          <div class="meeting-card" onclick="openMeetingModal('${meeting.id}')">
+            <strong>面談日: ${new Date(meeting.meeting_date).toLocaleString("ja-JP")}</strong><br>
+            <small>場所: ${meeting.location || ''}</small><br>
+            <p>${truncateText(meeting.job_description || '', 50)}</p>
+            <p>担当者: ${meeting.interviewer} | 面談者: ${meeting.interviewee}</p>
+          </div>
+        `).join("");
+      } else {
+        meetingsList.innerHTML = "<p>面談はありません。</p>";
       }
-      return res.json();
-    })
-    .then(meetings => {
-      meetingsData = meetings; // グローバルに保持
-      const meetingsList = document.getElementById("meetingsList");
-      if (meetingsList) {
-        if (meetings.length) {
-          meetingsList.innerHTML = meetings.map(meeting => `
-            <div class="meeting-card" onclick="openMeetingModal('${meeting.id}')">
-              <strong>面談日: ${new Date(meeting.meeting_date).toLocaleString("ja-JP")}</strong><br>
-              <small>場所: ${meeting.location || ''}</small><br>
-              <p>${truncateText(meeting.job_description || '', 50)}</p>
-              <p>担当者: ${meeting.interviewer} | 面談者: ${meeting.interviewee}</p>
-            </div>
-          `).join("");
-        } else {
-          meetingsList.innerHTML = "<p>面談はありません。</p>";
-        }
-      }
-    })
-    .catch(err => console.error("Error loading meetings:", err));
+    }
+  })
+  .catch(err => console.error("Error loading meetings:", err));
 }
 
-// モーダル表示（面談詳細＋コメント／編集ボタン）
 function openMeetingModal(meetingId) {
-  // 該当面談を取得
   const meeting = meetingsData.find(m => m.id === meetingId);
   if (!meeting) return;
   
-  // モーダルの作成
   const modal = document.createElement("div");
   modal.id = "meetingModal";
   modal.className = "modal";
@@ -572,7 +480,6 @@ function openMeetingModal(meetingId) {
   modalContent.style.overflowY = "auto";
   modalContent.style.position = "relative";
   
-  // 閉じるボタン
   const closeButton = document.createElement("span");
   closeButton.className = "close-modal";
   closeButton.innerHTML = "&times;";
@@ -583,7 +490,6 @@ function openMeetingModal(meetingId) {
   closeButton.style.fontSize = "24px";
   closeButton.addEventListener("click", closeMeetingModal);
   
-  // 面談詳細内容の表示エリア
   const detailDiv = document.createElement("div");
   detailDiv.id = "meetingDetailContent";
   detailDiv.innerHTML = `
@@ -601,7 +507,6 @@ function openMeetingModal(meetingId) {
     <p><strong>次のアクション:</strong> ${meeting.next_action || ""} / <strong>次の目標:</strong> ${meeting.next_goal || ""}</p>
   `;
   
-  // ボタン群（コメント・編集）
   const btnDiv = document.createElement("div");
   btnDiv.id = "meetingModalButtons";
   btnDiv.style.marginTop = "20px";
@@ -610,7 +515,6 @@ function openMeetingModal(meetingId) {
     <button onclick="showMeetingEditForm('${meeting.id}')">編集</button>
   `;
   
-  // コンテナ（コメントフォーム・編集フォーム用）
   const commentContainer = document.createElement("div");
   commentContainer.id = "commentFormContainer";
   commentContainer.style.marginTop = "20px";
@@ -619,7 +523,6 @@ function openMeetingModal(meetingId) {
   editContainer.id = "editFormContainer";
   editContainer.style.marginTop = "20px";
   
-  // モーダル組み立て
   modalContent.appendChild(closeButton);
   modalContent.appendChild(detailDiv);
   modalContent.appendChild(btnDiv);
@@ -629,7 +532,6 @@ function openMeetingModal(meetingId) {
   document.body.appendChild(modal);
 }
 
-// モーダルを閉じる
 function closeMeetingModal() {
   const modal = document.getElementById("meetingModal");
   if (modal) {
@@ -637,11 +539,10 @@ function closeMeetingModal() {
   }
 }
 
-// --- コメント機能 ---
-// （ここでは例としてlocalStorageに一時保存）
+/* --- コメント機能 --- */
 function showCommentForm(meetingId) {
   const container = document.getElementById("commentFormContainer");
-  container.innerHTML = ""; // 既存のフォームをクリア
+  container.innerHTML = "";
   
   const form = document.createElement("div");
   form.innerHTML = `
@@ -660,7 +561,6 @@ function submitMeetingComment(meetingId) {
     return;
   }
   
-  // 例：localStorageにコメントを保存（meetingCommentsは { meetingId: [ {user, text, timestamp}, ... ] }）
   let meetingComments = JSON.parse(localStorage.getItem("meetingComments")) || {};
   if (!meetingComments[meetingId]) {
     meetingComments[meetingId] = [];
@@ -674,22 +574,16 @@ function submitMeetingComment(meetingId) {
   
   alert("コメントを保存しました。");
   document.getElementById("commentText").value = "";
-  
-  // ※必要に応じてコメント履歴をモーダル内に表示する処理も追加可能
 }
 
-// --- 編集機能 ---
-// モーダル内に既存データをフォームで展開して編集できるようにする
+/* --- 編集機能（面談） --- */
 function showMeetingEditForm(meetingId) {
-  // 既存フォームがあればクリア
   const editContainer = document.getElementById("editFormContainer");
   editContainer.innerHTML = "";
   
-  // 対象面談を取得
   const meeting = meetingsData.find(m => m.id === meetingId);
   if (!meeting) return;
   
-  // 編集フォーム作成
   const form = document.createElement("div");
   form.innerHTML = `
     <h3>面談内容を編集</h3>
@@ -721,7 +615,6 @@ function submitMeetingEdit(meetingId) {
     location: document.getElementById("edit_location").value,
     interviewer: document.getElementById("edit_interviewer").value,
     interviewee: document.getElementById("edit_interviewee").value,
-    // ※面談者情報は1つの入力から分割して保存するなど、実装方法に応じて調整してください
     interviewee_name: document.getElementById("edit_interviewee_info").value.split(",")[0] || "",
     interviewee_affiliation: document.getElementById("edit_interviewee_info").value.split(",")[1] || "",
     interviewee_position: document.getElementById("edit_interviewee_info").value.split(",")[2] || "",
@@ -749,21 +642,42 @@ function submitMeetingEdit(meetingId) {
   })
   .then(updated => {
     alert("面談情報を更新しました");
-    // 更新後、再読み込みまたはモーダル内容の更新
     loadMeetings();
     closeMeetingModal();
   })
   .catch(err => console.error("Error updating meeting:", err));
 }
 
+/* ================================
+   共通処理
+================================ */
+function logout() {
+  localStorage.removeItem("loggedInUser");
+  window.location.href = "login.html";
+}
 
-
-// --------------------------------------------
+function truncateText(text, n) {
+  if (!text) return "";
+  return text.length > n ? text.substring(0, n) + "…" : text;
+}
 
 document.addEventListener("DOMContentLoaded", function () {
-  // 既存の初期処理…
-
-  // 面談管理画面の場合、面談者入力欄の候補を設定
+  const usernameDisplay = document.getElementById("loggedInUsername");
+  if (usernameDisplay && user) {
+    usernameDisplay.textContent = user.username;
+  }
+  if (document.getElementById("assignee")) {
+    loadUsers();
+  }
+  if (document.getElementById("tasks")) {
+    loadTasks();
+  }
+  if (document.getElementById("meetingsList")) {
+    loadMeetingUsers();
+    loadMeetings();
+  }
+  
+  // 面談者入力欄の候補設定
   const intervieweeInput = document.getElementById("interviewee");
   const datalist = document.getElementById("intervieweeList");
   if (intervieweeInput && datalist) {
@@ -807,7 +721,3 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-
-// --------------------------------------------
-
-
