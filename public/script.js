@@ -1,5 +1,3 @@
-// script.js
-
 const API_URL = "https://task-management-production-583b.up.railway.app";
 const currentPage = window.location.pathname.split("/").pop();
 
@@ -82,8 +80,6 @@ function loadUsers() {
 /* ================================
    タスク管理
 ================================ */
-
-// グローバル変数：タスク一覧データを保持
 let tasksData = [];
 
 function loadTasks() {
@@ -98,7 +94,6 @@ function loadTasks() {
       return res.json();
     })
     .then(tasks => {
-      // 期限が早い順に昇順ソート
       tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
       tasksData = tasks;
       const tasksContainer = document.getElementById("tasks");
@@ -139,7 +134,6 @@ function loadTasks() {
     .catch(error => console.error("❌ タスク取得エラー:", error));
 }
 
-// 承認ボタンを押すとボタンを編集／削除に切り替え
 function approveTask(taskId) {
   const btnDiv = document.getElementById(`task-buttons-${taskId}`);
   if (btnDiv) {
@@ -150,7 +144,6 @@ function approveTask(taskId) {
   }
 }
 
-// 却下ボタンを押すと赤文字メッセージ＋編集／削除ボタンに切り替え
 function rejectTask(taskId) {
   const task = tasksData.find(t => t.id === taskId);
   const btnDiv = document.getElementById(`task-buttons-${taskId}`);
@@ -283,7 +276,6 @@ function showTaskEditModal(task) {
   modalContent.style.maxWidth = '500px';
   modalContent.style.position = 'relative';
 
-  // 右上の✕ボタンでモーダルを閉じる
   const closeButton = document.createElement('span');
   closeButton.innerHTML = '&times;';
   closeButton.style.position = 'absolute';
@@ -330,7 +322,7 @@ function showTaskEditModal(task) {
     </div>
     <div class="form-group">
       <label for="edit_task_assignee">担当者</label>
-      <select  id="edit_task_assignee" value="${task.assignee}" required></select>
+      <select id="edit_task_assignee" required></select>
     </div>
     <div style="text-align: right; margin-top: 20px;">
       <button type="button" onclick="submitTaskEdit('${task.id}')">保存</button>
@@ -370,7 +362,6 @@ function submitTaskEdit(taskId) {
   .catch(err => console.error("タスク更新エラー:", err));
 }
 
-/* ---------- タスク削除 ---------- */
 function deleteTask(taskId) {
   if (!confirm("タスクを削除してもよろしいですか？")) return;
 
@@ -390,7 +381,6 @@ function deleteTask(taskId) {
 /* ================================
    面談管理機能（Meeting Management）
 ================================ */
-
 let meetingsData = [];
 
 function loadMeetingUsers() {
@@ -436,14 +426,16 @@ function loadMeetings() {
     const meetingsList = document.getElementById("meetingsList");
     if (meetingsList) {
       if (meetings.length) {
-        meetingsList.innerHTML = meetings.map(meeting => `
+        meetingsList.innerHTML = meetings.map(meeting => 
+          `
           <div class="meeting-card" onclick="openMeetingModal('${meeting.id}')">
             <strong>面談日: ${new Date(meeting.meeting_date).toLocaleString("ja-JP")}</strong><br>
             <small>場所: ${meeting.location || ''}</small><br>
             <p>${truncateText(meeting.job_description || '', 50)}</p>
             <p>担当者: ${meeting.interviewer} | 面談者: ${meeting.interviewee}</p>
           </div>
-        `).join("");
+          `
+        ).join("");
       } else {
         meetingsList.innerHTML = "<p>面談はありません。</p>";
       }
@@ -591,7 +583,7 @@ function showMeetingEditForm(meetingId) {
     <label>場所: <input type="text" id="edit_location" value="${meeting.location || ''}"></label><br>
     <label>担当者: <input type="text" id="edit_interviewer" value="${meeting.interviewer}"></label><br>
     <label>面談者: <input type="text" id="edit_interviewee" value="${meeting.interviewee}"></label><br>
-    <label>面談者情報: <input type="text" id="edit_interviewee_info" value="${(meeting.interviewee_name || '') + ', ' + (meeting.interviewee_affiliation || '') + ', ' + (meeting.interviewee_position || '')}"></label><br>
+    <label>面談者情報: <input type="text" id="edit_interviewee_info" value="${meeting.interviewee_name || ''}, ${meeting.interviewee_affiliation || ''}, ${meeting.interviewee_position || ''}"></label><br>
     <label>業務内容・目標:<br>
       <textarea id="edit_job_description" rows="3" style="width:100%;">${meeting.job_description || ''}</textarea>
     </label><br>
@@ -677,43 +669,10 @@ document.addEventListener("DOMContentLoaded", function () {
     loadMeetings();
   }
   
-  // 面談者入力欄の候補設定
   const intervieweeInput = document.getElementById("interviewee");
   const datalist = document.getElementById("intervieweeList");
   if (intervieweeInput && datalist) {
-    const names = [
-      "釘田翼空","平山祐悟","浅野雄也","斎藤妃那子","長谷川拓豊","徳田爽香","田川翔太",
-      "高木淳之介","木内由夏","中嶋友香","岡田まの","宮島勇斗","岡部恭祐","山田蓮",
-      "津野圭亮","太田優紀","山越虹汰","馬場彩寧","大西竜生","加藤幸菜","玉井勘大",
-      "河内美鈴","大石寛仁","平田敦士","熊鞍治憲","山本麻由","山口まりあ","岡田拓弥",
-      "菅原古都乃","末本武大","杉本航","加藤拓郎","菊地航稀","川村桃矢","西之濵彩香",
-      "成見大樹","日野晴香","森優斗","芝翔大","矢野美紀","江南なずな","本田嘉章",
-      "堀内優紀","岡本彩花","興津洸希","橋村聖也","荒牧浩志","白石隼都","鈴木千夏",
-      "鈴木かりん","梅本望純","内藤まゆら","渡邉貴博","奥修平","松田悠平","富田哲平",
-      "関岡丈一郎","大谷拓摩","島田莞奈","廣瀬真琴","小松達哉","稲垣仁志","河村光軌",
-      "神吉愛夢","清水智尋","矢貫麗","岩村涼花","大谷俊介","大和田壮真","三澤萌香",
-      "杉野陽","橋本恵里","段野瑞季","齊藤大地","小野弘貴","森本修平","今井里々華",
-      "向井優美香","山本龍之介","元山瑠衣","吉見渉","中井啓介","西村真樹","高井雄輔",
-      "一木紳太郎","新田大樹","藁科美帆","今中柊介","高山晶彗","堤統也","大室慶介",
-      "堀江翔太","上田啓太","石田侑祐","稲葉有哉","名田匠見","臼井健太","山根颯翔",
-      "森山滉基","新上剛志","柏原颯人","永岡駿典","福田澄香","田村瑠奈","竹田凱",
-      "伊藤虎ノ介","荒木翔太","田中悠貴","平野由芙佳","小林歩","山中颯太","大石拓海",
-      "江本紗里","藤原将大","中原宙","山本海斗","藤田拓己","山口未鈴","池田利恩",
-      "岡村雄飛","金子拓己","中村陽子","和泉 慶樹","野上明日香","萩原 菜穂","上杉 弥杏",
-      "山口 真澄","松本 渉","永田 沙羅","蓬莱 豊哉","田中晴菜","谷琴乃","橋岡弦希",
-      "日比野龍","山森康平","宮地就太","松村夢二","南龍太郎","南陸人","大野ラムアウスティン",
-      "槇野晃平","大塚美邦","矢野一貴","鈴木笙太","岩田奏流","伊藤万紘","泉谷愛幸",
-      "嶋崎駿","山下成樹","木村仁平","東根悠","大塚愛世","山口雄大","山本直毅","水戸陽也",
-      "新延大地","林芹南","上村莉子","松木優衣","福井直樹","友永良太","内田聖香","大居烈",
-      "西村優平","島田優","佐藤麗奈","志村天斗","森井奎樹","鈴木友梨","竹田桂子","大谷斗也",
-      "池本菜月","大澤柊介","藤野好礼","竹田竣叶","石井和也","大林咲花","山田奈峰子",
-      "長部嵩一朗","富田樂斗","鈴木麗生","成田忠彦","西尾文吾","野村陽咲","出口芽依",
-      "寺岡勇人","田中尊","佐藤裕哉","坂田海人","西村淳生","勝井遼暉","尾﨑稜也","梶山奎哉",
-      "高橋広都","河村晃輔","土田歩実","前田柊人","北元蓮太","小林大地","神野太志","清水颯太",
-      "赤井友希乃","黄柊基","山口彩耶","速水綾真","岡本響耀","三苫晃暢","一木秀斗","蔡文華",
-      "田邉拓己","日野友理夜","奥田舜涼","矢野常貴","早川紗妃","余田莉穂","橋本真生",
-      "獺越真土","加古勇也","小沼悟","大場弘資","神山拓磨","浅田晨吾","守屋一輝","浮田 朱梨"
-    ];
+    const names = [/* 候補名の配列 */];
     names.forEach(function(name) {
       const option = document.createElement("option");
       option.value = name;
