@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config(); // .env の設定を読み込み
 
 const express = require('express');
